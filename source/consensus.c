@@ -7,7 +7,9 @@ size_t branchGetIntSize(Branch* br)
 
 Branch* branchCreate(unsigned size)
 {
-    Branch* branch = (Branch*)malloc(sizeof(Branch)); 
+    Branch* branch;
+
+    branch = (Branch*)malloc(sizeof(Branch)); 
     branch->size = size;
     branch->branch = (INT*)calloc(sizeof(INT), branchGetIntSize(branch));
     return branch;
@@ -40,8 +42,10 @@ size_t* branchGetLeavesPos(Branch* br, size_t* leavesNum, size_t maxNum)
     unsigned i = 0;
     unsigned j = 0;
     unsigned k = 0;
-    size_t* positions = malloc(sizeof(size_t) * br->size);
+    size_t* positions;
     unsigned curSize = 0;
+
+    positions = malloc(sizeof(size_t) * br->size);
     for(i = 0; i < branchGetIntSize(br); ++i)
     {
         j = 0;
@@ -70,10 +74,12 @@ size_t* branchGetLeavesPos(Branch* br, size_t* leavesNum, size_t maxNum)
 int branchCompare(Branch* br1, Branch* br2)
 {
     int i = 0;
+
     if (br1->size != br2->size)
     {
-        raiseError("Branches are not of the same size", __FILE__, __FUNCTION__,
-                __LINE__);
+        fprintf(stderr, "branchComplare: Branches are not of the same size\n");
+        exit(1);
+/*        raiseError("Branches are not of the same size", __FILE__, __FUNCTION__, __LINE__); */
     }
     for(; i < branchGetIntSize(br1); ++i)
     {
@@ -92,8 +98,12 @@ int branchCompare(Branch* br1, Branch* br2)
 int vBranchCompare(const void* branch1, const void* branch2)
 {
     int i = 0;
-    Branch* brPtr1 = *(Branch**)branch1;
-    Branch* brPtr2 = *(Branch**)branch2;
+    Branch* brPtr1;
+    Branch* brPtr2;
+
+    brPtr1 = *(Branch**)branch1;
+    brPtr2 = *(Branch**)branch2;
+
     return branchCompare(brPtr1, brPtr2);
 }
 
@@ -175,8 +185,10 @@ char branchContradict(Branch* br1, Branch* br2)
 
     if (br1->size != br2->size)
     {
-        raiseError("Branches are not of the same size", __FILE__, __FUNCTION__,
-                __LINE__);
+        fprintf(stderr, "branchContradict: Branches are not of the same size\n");
+        exit(1);
+
+/*        raiseError("Branches are not of the same size", __FILE__, __FUNCTION__, __LINE__); */
     }
 
 
@@ -214,8 +226,10 @@ void branchArrayAdd(BranchArray* ba, Branch* branch)
 {
     if (ba->size && (ba->array[0]->size != branch->size))
     {
-        raiseError("Branches are not of the same size", __FILE__, __FUNCTION__,
-                __LINE__);
+        fprintf(stderr, "branchArrayAdd: Branches are not of the same size\n");
+        exit(1);
+
+/*        raiseError("Branches are not of the same size", __FILE__, __FUNCTION__, __LINE__);*/
     }
 
     if (ba->size == ba->maxSize)
@@ -356,22 +370,29 @@ BranchArray* treeToBranch(Tree* tree, int* permutation)
     int i = 0;
     int j = 0;
     unsigned branchNum = tree->nodesNum;
-    BranchArray* ba = branchArrayCreate(branchNum);
-    BranchArray* result = branchArrayCreate(tree->nodesNum - 1);
-    NodeStack* stack = nodeStackCreate(tree->nodesNum);
+    BranchArray* ba;
+    BranchArray* result;
+    NodeStack* stack;
     Node* curNode = 0;
     Node* nextNode = 0;
+    char* isTrivial;
+
+    ba = branchArrayCreate(branchNum);
+    result = branchArrayCreate(tree->nodesNum - 1);
+    stack = nodeStackCreate(tree->nodesNum);
+
     if (tree->leavesNum == 0)
     {
         return 0;
     }
     if (tree == 0)
     {
-        raiseError("null Tree pointer", __FILE__, __FUNCTION__, __LINE__);
+        perror("Function treeToBranch: null Tree pointer");
+        exit(1);
+/*        raiseError("null Tree pointer", __FILE__, __FUNCTION__, __LINE__); */
     }
 
     treeWash(tree);
-
 
     for(i = 0; i < branchNum; ++i)
     {
@@ -430,7 +451,7 @@ BranchArray* treeToBranch(Tree* tree, int* permutation)
         }
     }
 
-    char* isTrivial = calloc(sizeof(char), branchNum);
+    isTrivial = (char*)calloc(sizeof(char), branchNum);
     isTrivial[curNode->pos] = 1;
     for (i = 0; i < tree->leavesNum; ++i)
     {
@@ -464,8 +485,10 @@ char branchIsSubset(Branch* br1, Branch* br2) // 0 - not 1 - br2 is subset br1,
 
     if (br1->size != br2->size)
     {
-        raiseError("Branches are not of the same size", __FILE__, __FUNCTION__,
-                __LINE__);
+        fprintf(stderr, "branchIsSubset: Branches are not of the same size\n");
+        exit(1);
+
+/*        raiseError("Branches are not of the same size", __FILE__, __FUNCTION__, __LINE__); */
     }
 
     for(i = 0; i < branchGetIntSize(br1); ++i)
@@ -493,8 +516,9 @@ Branch* branchAnd(Branch* br1, Branch* br2)
     Branch* andBranch = NULL;
     if (br1->size != br2->size)
     {
-        raiseError("Branches are not of the same size", __FILE__, __FUNCTION__,
-                __LINE__);
+        fprintf(stderr, "branchAnd: Branches are not of the same size\n");
+        exit(1);
+/*        raiseError("Branches are not of the same size", __FILE__, __FUNCTION__, __LINE__); */
     }
     andBranch = branchCreate(br1->size);
 
@@ -512,8 +536,9 @@ Branch* branchOr(Branch* br1, Branch* br2)
     Branch* orBranch = NULL;
     if (br1->size != br2->size)
     {
-        raiseError("Branches are not of the same size", __FILE__, __FUNCTION__,
-                __LINE__);
+        fprintf(stderr, "branchOr: Branches are not of the same size\n");
+        exit(1);
+/*        raiseError("Branches are not of the same size", __FILE__, __FUNCTION__, __LINE__); */
     }
     orBranch = branchCreate(br1->size);
 
@@ -657,16 +682,20 @@ void parserTreePrint(ParserTree* tree)
 void parserTreeAdd(ParserTree* tree, BranchOcc* branchOcc,
         char* name) // 0 for inner, other for leaf
 {
-    ++tree->size;
+    ParserNode* curNode;
+    ParserNode* temp = NULL;
+    char isSubset = 1;
+    
+    ++(tree->size);
     if (tree->root == NULL)
     {
             tree->root = parserNodeCreate(branchOcc);
         if (name) tree->root->treeNode = leafCreate(name);
         return;
     }
-    ParserNode* curNode = tree->root;
-    ParserNode* temp = NULL;
-    char isSubset = 1;
+    curNode = tree->root;
+    temp = NULL;
+    isSubset = 1;
     while(true)
     {
         if( (isSubset = 
@@ -754,20 +783,29 @@ Tree* branchCounterToTree(BranchCounter* bc, char** names)
     ParserNode* curNode = NULL;
     Branch* branch = NULL;
     INT p = 1;
-    size_t leavesNum = bc->array[0]->branch->size;
-    ParserTree* parser = parserTreeCreate();
-    Tree* tree = treeCreate(); 
-    tree->nodes = malloc(sizeof(Node*) * (leavesNum * 2 - 2));
-    tree->leaves = malloc(sizeof(Node*) * (leavesNum));
-    tree->leavesNum = leavesNum;
+    size_t leavesNum;
+    ParserTree* parser;
+    Tree* tree;
     size_t curNodesNum = 0;
     size_t curLeavesNum = 0;
-    BranchOcc** trivialBranches = malloc(sizeof(BranchOcc**) * leavesNum); 
+    BranchOcc** trivialBranches;
     Branch* orBranch = NULL;
+    ParserNode** stack;
+    size_t stackSize = 0;
+    char ready;
+
+    leavesNum = bc->array[0]->branch->size;
+    parser = parserTreeCreate();
+    tree = treeCreate(); 
+    tree->nodes = (Node**)malloc(sizeof(Node*) * (leavesNum * 2 - 2));
+    tree->leaves = (Node**)malloc(sizeof(Node*) * (leavesNum));
+    tree->leavesNum = leavesNum;
 
     branch = branchCreate(leavesNum);
     branch->branch[0] = 1;
     branchNormalize(branch);
+
+    trivialBranches = (BranchOcc**)malloc(sizeof(BranchOcc*) * leavesNum); 
     trivialBranches[0] = branchOccCreate(branch, 0);
     parserTreeAdd(parser, trivialBranches[0], names[0]);
 
@@ -793,11 +831,10 @@ Tree* branchCounterToTree(BranchCounter* bc, char** names)
 
     curNode = parser->root;
 
-    ParserNode** stack = malloc(sizeof(ParserNode*) * (leavesNum * 2 - 2));
-    size_t stackSize = 0;
+    stack = malloc(sizeof(ParserNode*) * (leavesNum * 2 - 2));
+    stackSize = 0;
     stack[stackSize++] = parser->root;
-    char ready = 1;
-
+    ready = 1;
     while(stackSize > 0)
     {
         ready = 1;
@@ -818,22 +855,26 @@ Tree* branchCounterToTree(BranchCounter* bc, char** names)
 
             if (curNode->left == NULL && curNode->right == NULL)
             {
-                //      001100
-                //       /
-                // 001000 
-                //       \
-                //         000100  we are here 
+/*
+                      001100
+                       /
+                 001000 
+                       \
+                         000100  we are here 
+*/
                 tree->nodes[curNodesNum++] = curNode->treeNode;
                 curNode->treeNode->pos = curNodesNum - 1;
                 tree->leaves[curLeavesNum++] = curNode->treeNode;
             }
             else if (curNode->left == NULL )
             {   
-                //      001100 or 001110
-                //       /
-                // 001000 we are here
-                //       \
-                //         000100  or 0001100 
+/*
+                      001100 or 001110
+                       /
+                 001000 we are here
+                       \
+                         000100  or 0001100 
+*/
 
                 tree->nodes[curNodesNum++] = curNode->treeNode;
                 tree->leaves[curLeavesNum++] = curNode->treeNode;
@@ -870,8 +911,9 @@ Tree* branchCounterToTree(BranchCounter* bc, char** names)
                     }
                     else
                     {
-                        raiseError("Something've gone wrong\n",
-                                __FILE__, __FUNCTION__, __LINE__);
+                        perror("Something've gone wrong");
+                        exit(1);
+/*                      raiseError("Something've gone wrong\n", __FILE__, __FUNCTION__, __LINE__); */
                     }
                 }
                 

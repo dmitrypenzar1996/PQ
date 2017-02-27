@@ -98,7 +98,7 @@ typedef struct
 
 ParserNode* parserNodeCreate(BranchOcc* branchOcc);
 void parserNodeDelete(ParserNode* nd);
-ParserTree* parserTreeCreate();
+ParserTree* parserTreeCreate(void);
 void parserTreeDelete(ParserTree* tree);
 void parserTreePrint(ParserTree* tree);
 Tree* makeConsensus(Tree** treeArray, size_t treeNum, double threshold,
