@@ -63,7 +63,7 @@ Node* nodeCreate()
     node = (Node*)malloc(sizeof(Node));
     node->name = 0;
     node->neighbours = (Node**)calloc(sizeof(Node*), DEFAULT_MAX_NODE_SIZE);
-    node->dist = (unsigned*)calloc(sizeof(unsigned), DEFAULT_MAX_NODE_SIZE);
+    node->dist = (double*)calloc(sizeof(double), DEFAULT_MAX_NODE_SIZE);
     node->neiNum = 0;
     node->maxNeiNum = DEFAULT_MAX_NODE_SIZE;
     node->color = WHITE;
@@ -102,7 +102,7 @@ void nodeDelete(Node* node)
     return;
 } /* nodeDelete */
 
-void nodeAddNeighbour(Node* node, Node* neighbour, unsigned dist)
+void nodeAddNeighbour(Node* node, Node* neighbour, double dist)
 {
     if (neighbour == 0)
     {
@@ -174,7 +174,7 @@ void treeDelete(Tree* tree)
     return;
 } /* treeDelete */
 
-unsigned readLength(char* string, unsigned* pos)
+double readLength(char* string, unsigned* pos)
 {
     int j;
    
@@ -193,8 +193,10 @@ unsigned readLength(char* string, unsigned* pos)
             exit(1);
         }
     }
+
+    double length = atof(string + (*pos));
     *pos = j;
-    return atof(string);
+    return length;
 } /* readLength */
 
 char* readName(char* string, unsigned* pos)
@@ -230,10 +232,12 @@ Tree* treeFromNewick(char* newick)
     Node** leaves;
     Node** nodes;
     Node* node;
+    Node* nei;
     Node* fuse;
     unsigned int curPos;
     char* name;
     int i;
+    double dist;
 
     tree = treeCreate();
     stack = nodeStackCreate(strlen(newick));
@@ -278,9 +282,20 @@ Tree* treeFromNewick(char* newick)
         else if (newick[curPos] == ':')
         {
             ++curPos;
-            nodeStackPeek(stack)->dist[\
-            nodeStackPeek(stack)->neiNum] = readLength(newick,\
-                    &curPos);
+
+            node = nodeStackPeek(stack);
+            dist = readLength(newick, &curPos);
+            node->dist[node->neiNum - 1] = dist;
+            nei = node->neighbours[node->neiNum - 1];
+
+            for(i = 0; i < nei->neiNum; ++i)
+            {
+                if (node == nei->neighbours[i])
+                {
+                    nei->dist[i] = dist;
+                    break;
+                }
+            }
         }
         else if (newick[curPos] == ' ' || newick[curPos] == ',' || 
                  newick[curPos] < 32)
@@ -288,7 +303,7 @@ Tree* treeFromNewick(char* newick)
             ++curPos;
         }
         else
-        {       
+        {
             name = readName(newick, &curPos);
             node = leafCreate(name);
             free(name);
@@ -303,12 +318,13 @@ Tree* treeFromNewick(char* newick)
     }
  
     nodeStackDelete(stack);
-    if (nodes[0]->neiNum < 2)
-    {
-        fprintf(stderr, "Error, tree must contain at least two leaves,\
-                Tree:treeFromNewick\n");
-        exit(1);
-    }
+    //if (nodes[0]->neiNum < 2)
+   // {
+  //      fprintf(stderr, "Error, tree must contain at least two leaves,\
+  //              Tree:treeFromNewick\n");
+  //      exit(1);
+  //  }
+  //
 
     //if (nodesNum != (leavesNum * 2 - 2) && nodesNum != (leavesNum * 2 - 1))
     //{
@@ -530,23 +546,19 @@ char* treeConsensusToString(Tree* tree)
 {
     size_t strCurSize = 0;
     size_t strMaxSize = default_strSize;
-    char* string;
-    NodeStack* stack;
-    size_t* occStack;
+    char* string = malloc(sizeof(char) * strMaxSize);
+    string[strCurSize++] = '('; 
+    NodeStack* stack = nodeStackCreate(tree->nodesNum);
+    size_t* occStack = malloc(sizeof(size_t) * (tree->nodesNum));
     size_t occStackSize = 0;
-    Node* curNode;
+    Node* curNode = tree->nodes[0];
     Node* nextNode = NULL;
     int i = 0;
     size_t occurence = 0;
     char needComma = false;
-    char* number;
+    char* number = malloc(sizeof(char) * 12);
 
-    string = (char *)malloc(sizeof(char) * strMaxSize);
-    string[strCurSize++] = '('; 
-    stack = nodeStackCreate(tree->nodesNum);
-    occStack = malloc(sizeof(size_t) * (tree->nodesNum));
-    curNode = tree->nodes[0];
-    number = malloc(sizeof(char) * 12);
+
     treeWash(tree);
     curNode->color = BLACK;
     nodeStackPush(stack, curNode);
@@ -963,16 +975,14 @@ Tree* treeRead(char* inFileName)
 
     while ((line = readLine(inFile)) != NULL)
     {
-        if ( (strlen(strNewickTree) + strlen(line)) > strSize)
+        if ( (strlen(strNewickTree) + strlen(line)) >= strSize)
         {
             strSize = (strSize + strlen(line)) * 3 / 2 + 1;
             strNewickTree = realloc(strNewickTree, sizeof(char) * strSize);
         }
         memcpy(strNewickTree + strlen(strNewickTree), line, strlen(line) + 1);
-        //free(line);
+        free(line);
     }
-    /*strNewickTree = realloc(strNewickTree, strlen(strNewickTree) + 1);*/
-    /* result = (Tree*)malloc(sizeof(Tree)); */
 
     result = treeFromNewick(strNewickTree);
     free(strNewickTree);
@@ -1542,29 +1552,19 @@ unsigned treeGetDist(Tree* tree, unsigned node1ID, unsigned node2ID)
 Tree* treePrune(Tree* source, char** leavesNames, size_t leavesNum,
         char calculateLcaFinder)
 {
-    Tree* result;
-    int i, j, isFound;
-    size_t foundNum = 0;
-    int* takeInTree;
-    NodeStack* stack;
-    NodeStack* pruneStack;
-    Node* curNode = NULL;
-    Node* nextNode = NULL;
-    Node** neiResult = NULL;
-    Node* newNode = NULL; 
-    Node* nei1 = NULL;
-    Node* nei2 = NULL;
-    size_t rootPos = 0;
-
-    result = treeCreate();
     treeWash(source);
+    Tree* result = treeCreate();
     result->nodesNum = 0;
     result->leavesNum = 0;
     result->leaves = calloc(sizeof(Node*), leavesNum);
     result->nodes = calloc(sizeof(Node*), leavesNum * 2 - 1);
+    int i = 0;
+    int j = 0;
+    int isFound = 0;
 
-    takeInTree = calloc(source->nodesNum, sizeof(int));
+    int* takeInTree = calloc(source->nodesNum, sizeof(int));
 
+    size_t foundNum = 0;
     for(i = 0; i < leavesNum; ++i)
     {
         isFound = 0;
@@ -1579,22 +1579,25 @@ Tree* treePrune(Tree* source, char** leavesNames, size_t leavesNum,
         }
         if (!isFound)
         {
-             fprintf(stderr, "No leaf \"%s \"in source tree\n", leavesNames[i]);
-             exit(1);
-/*           raiseError("No such leaf in source tree", __FILE__, __FUNCTION__, __LINE__); */
+            fprintf(stderr, "%s\n", leavesNames[i]);
+            raiseError("No such leaf in source tree", 
+                    __FILE__, __FUNCTION__, __LINE__);
         }
     }
 
-    stack = nodeStackCreate(source->nodesNum);
-    pruneStack = nodeStackCreate(source->nodesNum);
+    NodeStack* stack = nodeStackCreate(source->nodesNum);
+    NodeStack* pruneStack = nodeStackCreate(source->nodesNum);
+    Node* curNode = NULL;
+    Node* nextNode = NULL;
+    Node** neiResult = NULL;
+    Node* newNode = NULL; 
+    Node* nei1 = NULL;
+    Node* nei2 = NULL;
 
+    size_t rootPos = 0;
     while(source->nodes[rootPos]->neiNum == 1){++rootPos;}
-    if (rootPos >= source->nodesNum) 
-    {
-        perror("Wrong tree structure");
-        exit(1);
-    /*  raiseError("Wrong tree structure\n",  __FILE__, __FUNCTION__, __LINE__); */
-    }
+    if (rootPos >= source->nodesNum) raiseError("Wrong tree structure\n",
+            __FILE__, __FUNCTION__, __LINE__);
 
     nodeStackPush(stack, source->nodes[rootPos]);
     source->nodes[rootPos]->color = GREY;
@@ -1705,8 +1708,8 @@ Tree* treePrune(Tree* source, char** leavesNames, size_t leavesNum,
     {
         printf("pruneStackSize : %d\n", pruneStack->curSize);
         printf("result Leaves Num %d need %zu\n", result->leavesNum, leavesNum);
-/*        raiseError("Something've gone wrong\n",  __FILE__, __FUNCTION__, __LINE__); */
-        exit(1);
+        raiseError("Something've gone wrong\n",
+                __FILE__, __FUNCTION__, __LINE__);
     }
     nodeStackPop(pruneStack);
 

@@ -90,16 +90,10 @@ char* readLine(FILE* inStream)
 
 char* readLine(FILE* inFile)
 {
-    static int x;
     int lineMaxSize = 400;
-    char* line;
+    char* line = (char*)malloc(sizeof(char) * lineMaxSize);
+    
     char buffer[200];
-    char* npos;
-
-    x++;
-
-    line = (char*)malloc(sizeof(char) * lineMaxSize);
-
     if (fgets(buffer, 200, inFile))
     {
         memcpy(line, buffer, strlen(buffer) + 1);
@@ -119,10 +113,10 @@ char* readLine(FILE* inFile)
         memcpy(line + strlen(line), buffer, strlen(buffer) + 1);
     }
 
-    npos = strchr(line, '\n');
+    char* npos = strchr(line, '\n');
     if (npos != 0)
     {
-        (*npos) = '\0'; // delete \n from line
+        *npos = '\0'; // delete \n from line
     }
 
     line = realloc(line, strlen(line) + 1);

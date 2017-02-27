@@ -238,16 +238,13 @@ int main(int argsNum, char** args)
         sprintf(pathName, "%s/%s", args[2], dir->d_name);
 
         tree = treeRead(pathName);
-
         treeNames = treeGetNames(tree);
+        treeBranchInfo = treeToBranchInfo(tree);
 
         etalon = treePrune(fullEtalon, treeNames,
-            tree->leavesNum, 1); 
-
+            tree->leavesNum, 1);
         etalonNames = treeGetNames(etalon);
-
         etalonBranchInfo = treeToBranchInfo(etalon);
-        treeBranchInfo = treeToBranchInfo(tree);
 
         permutation = calculatePermutation(
             treeNames, etalonNames,
@@ -265,29 +262,42 @@ int main(int argsNum, char** args)
         char isFound = 0;
         for(i = 0; i < branchNum; ++i)
         {
+            
+            //write path to tree file to file
             fprintf(stdout, "%s;\"%ld", pathName, etalonBranchInfo[i]->leafDeep[0]);
+
+            //write leaves deeps in tree
             for(k = 1; k < tree->leavesNum; ++k)
             {
-                fprintf(stdout, ";%ld", etalonBranchInfo[i]->leafDeep[k]);
+                fprintf(stdout, ";%ld", treeBranchInfo[i]->leafDeep[k]);
             }
-
+            fprintf(stdout, "\"");
 
             isFound = 0;
-            for(j = 0; (j < branchNum) && (!isFound); ++j)
+
+            for(j = 0; (j < branchNum) && (!isFound); ++j) 
+                // search for branch i in etalon
             {
-                if (branchCompare(treeBranches->array[j],
-                            etalonBranchInfo[i]->branch) == 0)
+                if (branchCompare(treeBranches->array[i],
+                            etalonBranchInfo[j]->branch) == 0)
                 {
                     isFound = 1;
+                    //temp = treeBranches->array[j];
+                    //treeBranches->array[j] = treeBranches->array[branchNum - i - 1];
+                    //treeBranches->array[branchNum - i - 1] = temp;
 
-                    temp = treeBranches->array[j];
-                    treeBranches->array[j] = treeBranches->array[branchNum - i - 1];
-                    treeBranches->array[branchNum - i - 1] = temp;
-                    fprintf(stdout, "\";B%lf", treeBranchInfo[j]->boot_score);
-                    fprintf(stdout, ";1\n");
+                    for(k = 0; k < tree->leavesNum; ++k)
+                    {
+                        fprintf(stdout, ";%ld", etalonBranchInfo[j]->leafDeep[k]);
+                    }
+                    fprintf(stdout, "\"");
                 }
             }
-            if (!isFound) fprintf(stdout, "\";0\n");
+            if (!isFound)
+            {
+                fprintf(stdout, ";\"None\"");
+            }
+            fprintf(stdout, ";%.01lf\n", treeBranchInfo[i]->boot_score);
         }
 
         for(i = 0; i < branchNum; ++i)

@@ -3,12 +3,6 @@
 #include "consensus.h"
 
 
-int f()
-{
-    return 0;
-}
-
-
 int main(int argNum, char** args)
 {
     int i = 0;
