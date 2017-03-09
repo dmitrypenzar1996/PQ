@@ -262,7 +262,6 @@ int main(int argsNum, char** args)
         char isFound = 0;
         for(i = 0; i < branchNum; ++i)
         {
-            
             //write path to tree file to file
             fprintf(stdout, "%s;\"%ld", pathName, etalonBranchInfo[i]->leafDeep[0]);
 
