@@ -115,15 +115,15 @@ void branchNormalize(Branch* br)
     {
         for(i = 0; i < branchGetIntSize(br); ++i)
         {
-            br->branch[i] = ~(br->branch[i]);       
+            br->branch[i] = ~(br->branch[i]);
         }
 
-        //--i;
-        //if (br->size % intSize)
-        //{
-        //    p = 1 << (br->size);
-        //    br->branch[i] = br->branch[i] % p; 
-        //}
+        --i;
+        if (br->size % intSize)
+        {
+            p = 1 << (br->size);
+            br->branch[i] = br->branch[i] % p; 
+        }
     }
     return;
 }
