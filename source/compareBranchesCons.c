@@ -282,11 +282,9 @@ int main(int argsNum, char** args)
                             etalonBranchInfo[j]->branch) == 0)
                 {
                     isFound = 1;
-                    //temp = treeBranches->array[j];
-                    //treeBranches->array[j] = treeBranches->array[branchNum - i - 1];
-                    //treeBranches->array[branchNum - i - 1] = temp;
 
-                    for(k = 0; k < tree->leavesNum; ++k)
+                    fprintf(stdout, ";\"%ld", etalonBranchInfo[j]->leafDeep[0]);
+                    for(k = 1; k < tree->leavesNum; ++k)
                     {
                         fprintf(stdout, ";%ld", etalonBranchInfo[j]->leafDeep[k]);
                     }
