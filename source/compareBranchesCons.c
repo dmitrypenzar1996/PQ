@@ -7,8 +7,8 @@
 
 typedef struct
 {
-    Branch* branch;    
-    long* leafDeep;  
+    Branch* branch;
+    long* leafDeep;
     double boot_score; // bootstrap score
 }BranchInfo;
 
@@ -33,12 +33,13 @@ void branchInfoDelete(BranchInfo* branchInfo)
     branchDelete(branchInfo->branch);
 }
 
-BranchInfo** treeToBranchInfo(Tree* tree)
+BranchInfo** treeToBranchInfo(Tree* tree, int* permutation)
 {
     int i = 0;
     int j = 0;
     int k = 0;
-    long dist = 0;
+    long dist1 = 0;
+    long dist2 = 0;
     INT p = 0;
     size_t notTrivialBranchesNum = 0;
     BranchInfo** branchInfoArr = NULL;
@@ -61,8 +62,8 @@ BranchInfo** treeToBranchInfo(Tree* tree)
     for(i = 0; i < tree->leavesNum; ++i)
     {// trivial branches
         p = 1;
-        p = p << (i & (intSize - 1));
-        branchInfoArr[tree->leaves[i]->pos]->branch->branch[i / intSize] |= p;
+        p = p << (permutation[i] & (intSize - 1));
+        branchInfoArr[tree->leaves[i]->pos]->branch->branch[permutation[i] / intSize] |= p;
     
         branchInfoArr[tree->leaves[i]->pos]->leafDeep[i] = 0;
         branchInfoArr[tree->leaves[i]->pos]->boot_score = 0;
@@ -95,6 +96,18 @@ BranchInfo** treeToBranchInfo(Tree* tree)
         }
         if (nextNode)
         {
+            for(i = 0; i < tree->leavesNum; ++i)
+            {
+                dist1 = treeGetDist(tree, 
+                    curNode->pos, tree->leaves[permutation[i]]->pos);
+                dist2 = treeGetDist(tree, nextNode->pos,
+                        tree->leaves[permutation[i]]->pos);
+                if (dist1 > dist2)
+                {
+                    dist1 = dist2;
+                }
+                branchInfoArr[nextNode->pos]->leafDeep[permutation[i]] = dist1;
+            }
             nodeStackPush(stack, nextNode);
             nextNode->color = GREY;
         }
@@ -107,67 +120,11 @@ BranchInfo** treeToBranchInfo(Tree* tree)
                     branchInfoArr[curNode->pos]->branch->branch[j] |= \
                             branchInfoArr[curNode->neighbours[i]->pos]->branch->branch[j];
                 }
-
-                for(j = 0; j < tree->leavesNum; ++j)
-                {
-                    dist = branchInfoArr[curNode->neighbours[i]->pos]->leafDeep[j];
-                    if (branchInfoArr[curNode->pos]->leafDeep[j] == -1 &&
-                            dist != -1)
-                    {
-                        branchInfoArr[curNode->pos]->leafDeep[j] = dist + 1;
-                    }
-
-                    for(k = 0; k < curNode->neiNum; ++k)
-                    {
-                        if (k != i && curNode->neighbours[k]->neiNum != 1 &&
-                            curNode->neighbours[k]->color == BLACK)
-                        {
-                            if (branchInfoArr[curNode->neighbours[k]->pos]
-                                    ->leafDeep[j] == -1 && dist != -1)
-                            {
-                                branchInfoArr[curNode->neighbours[k]->pos]->leafDeep[j] =
-                                    dist + 1;
-                            } 
-                        }
-                    }
-                }
             }
+
             nodeStackPop(stack);
             curNode->color = BLACK;
         }
-    }
-
-
-    for(i = 0; i < tree->leavesNum; ++i)
-    {
-        tree->leaves[i]->color = WHITE;
-    }
-
-
-    rootNode->color = WHITE;
-    nodeStackPush(stack, rootNode);
-
-
-    while (stack->curSize != 0)
-    {
-        curNode = nodeStackPeek(stack);
-        nodeStackPop(stack);
-        for(i = 0; i < curNode->neiNum; ++i)
-        {
-            if (curNode->neighbours[i]->color == BLACK)
-            {
-                for(j = 0; j < tree->leavesNum; ++j)
-                {
-                    if (branchInfoArr[curNode->neighbours[i]->pos]->leafDeep[j] == -1)
-                    {
-                        branchInfoArr[curNode->neighbours[i]->pos]->leafDeep[j] =
-                            branchInfoArr[curNode->pos]->leafDeep[j] + 1;
-                    }
-                }
-                nodeStackPush(stack, curNode->neighbours[i]);
-            }
-        }
-        curNode->color = WHITE;
     }
 
     isTrivial = calloc(sizeof(char), tree->nodesNum);
@@ -186,12 +143,14 @@ BranchInfo** treeToBranchInfo(Tree* tree)
     {
         if (!isTrivial[i])
         {
+            branchNormalize(branchInfoArr[i]->branch);
             branchInfoArrRmTrivial[j++] = branchInfoArr[i];
         } 
     }
 
     return branchInfoArrRmTrivial;
 }
+
 
 int main(int argsNum, char** args)
 {
@@ -215,7 +174,6 @@ int main(int argsNum, char** args)
     Branch* temp = NULL;
     BranchInfo** etalonBranchInfo = NULL;
     BranchInfo** treeBranchInfo = NULL;
-    BranchArray* treeBranches = NULL;
 
     d = opendir(args[2]);
     if(!d)
@@ -239,12 +197,13 @@ int main(int argsNum, char** args)
 
         tree = treeRead(pathName);
         treeNames = treeGetNames(tree);
-        treeBranchInfo = treeToBranchInfo(tree);
 
         etalon = treePrune(fullEtalon, treeNames,
             tree->leavesNum, 1);
         etalonNames = treeGetNames(etalon);
-        etalonBranchInfo = treeToBranchInfo(etalon);
+        permutation = getRange(0, tree->leavesNum);
+        etalonBranchInfo = treeToBranchInfo(etalon, permutation);
+        free(permutation);
 
         permutation = calculatePermutation(
             treeNames, etalonNames,
@@ -255,9 +214,10 @@ int main(int argsNum, char** args)
             fprintf(stderr, "Don't find some names in etalon tree\n");
             exit(1);
         }
-        treeBranches = treeToBranch(tree, permutation);
 
         int branchNum = tree->nodesNum - tree->leavesNum - 1;
+        treeBranchInfo = treeToBranchInfo(tree, permutation);
+
 
         char isFound = 0;
         for(i = 0; i < branchNum; ++i)
@@ -268,7 +228,8 @@ int main(int argsNum, char** args)
             //write leaves deeps in tree
             for(k = 1; k < tree->leavesNum; ++k)
             {
-                fprintf(stdout, ";%ld", treeBranchInfo[i]->leafDeep[k]);
+                fprintf(stdout, ";%ld", 
+                        treeBranchInfo[i]->leafDeep[k]);
             }
             fprintf(stdout, "\"");
 
@@ -277,7 +238,7 @@ int main(int argsNum, char** args)
             for(j = 0; (j < branchNum) && (!isFound); ++j) 
                 // search for branch i in etalon
             {
-                if (branchCompare(treeBranches->array[i],
+                if (branchCompare(treeBranchInfo[i]->branch,
                             etalonBranchInfo[j]->branch) == 0)
                 {
                     isFound = 1;
@@ -299,14 +260,12 @@ int main(int argsNum, char** args)
 
         for(i = 0; i < branchNum; ++i)
         {
-            branchDelete(treeBranches->array[i]);
             branchInfoDelete(etalonBranchInfo[i]);
             branchInfoDelete(treeBranchInfo[i]);
         }
 
         free(treeBranchInfo);
         free(etalonBranchInfo);
-        branchArrayDelete(treeBranches);
         treeDelete(tree);
         treeDelete(etalon);
         free(permutation);

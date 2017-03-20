@@ -318,6 +318,8 @@ Tree* treeFromNewick(char* newick)
     }
  
     nodeStackDelete(stack);
+
+
     //if (nodes[0]->neiNum < 2)
    // {
   //      fprintf(stderr, "Error, tree must contain at least two leaves,\
@@ -378,6 +380,7 @@ Tree* treeFromNewick(char* newick)
     tree->leaves = leaves;
     tree->leavesNum = leavesNum;
     tree->nodesNum = nodesNum;
+
 
     treeLCAFinderCalculate(tree);
 
@@ -1544,9 +1547,9 @@ Tree* treeSPRMove(Tree* tree, unsigned sourceNodeID, unsigned sourceNeiPos,\
 unsigned treeGetDist(Tree* tree, unsigned node1ID, unsigned node2ID)
 {
     unsigned node1Deep,  node2Deep, lcaDeep;
-    if (node1ID >= tree->leavesNum || node2ID >= tree->leavesNum)
+    if (node1ID >= tree->nodesNum || node2ID >= tree->nodesNum)
     {
-        fprintf(stderr, "Error, leaf ID is out of range");
+        fprintf(stderr, "Error, node ID is out of range");
         exit(1);
     }
     if (tree->lcaFinder == 0)
@@ -1555,8 +1558,9 @@ unsigned treeGetDist(Tree* tree, unsigned node1ID, unsigned node2ID)
         exit(1);
     }
 
+    
     node1Deep = tree->lcaFinder->deep[tree->lcaFinder->inPos[tree->nodes[node1ID]->pos]];
-    node2Deep = tree->lcaFinder->deep[tree->lcaFinder->inPos[tree->nodes[node1ID]->pos]];
+    node2Deep = tree->lcaFinder->deep[tree->lcaFinder->inPos[tree->nodes[node2ID]->pos]];
     lcaDeep = tree->lcaFinder->deep[sparseTableRMQ(tree->lcaFinder->sparceTable,\
             tree->lcaFinder->inPos[tree->nodes[node1ID]->pos],\
             tree->lcaFinder->inPos[tree->nodes[node2ID]->pos])];

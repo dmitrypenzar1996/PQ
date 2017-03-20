@@ -88,7 +88,7 @@ Tree* treeSPRMove(Tree* tree, unsigned sourceNodeID, unsigned sourceNeiID,\
               char newTree, char calcLCAFinder);
 
 unsigned treeFindLCA(Tree* tree, unsigned node1ID, unsigned node2ID);
-unsigned treeGetDist(Tree* tree, unsigned leaf1ID, unsigned leaf2ID);
+unsigned treeGetDist(Tree* tree, unsigned node1ID, unsigned node2ID);
 char* treeConsensusToString(Tree* tree);
 void treeConsensusWrite(Tree* tree, char* outFileName);
 Tree* treePrune(Tree* source, char** leavesNames, size_t leavesNum,
