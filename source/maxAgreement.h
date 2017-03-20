@@ -3,7 +3,6 @@
 #include "Tree.h"
 #include "add.h"
 #include "consensus.h"
-#include "CutTree.h"
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
