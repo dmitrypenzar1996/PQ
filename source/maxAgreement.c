@@ -1,8 +1,8 @@
 #include "maxAgreement.h"
 
-//Tree, growTree, add, consensus, countScore, countScoreHash, HashAlignment, RMQ, Record, TreeWS, RecordList, PWM
+//Tree, growTree, add, consensus, countScore, countScoreHash, HashAlignment, RMQ, Record, TreeWS, RecordList, PWM, CutTree
 
-BranchArray* treeToBranchModified(Tree* tree, int* permutation)
+BranchArray* treeRootedToBranchArray(Tree* tree, int* permutation)
 {
     INT p = 1;
     int i = 0;
@@ -25,7 +25,6 @@ BranchArray* treeToBranchModified(Tree* tree, int* permutation)
 
     treeWash(tree);
 
-
     for(i = 0; i < branchNum; ++i)
     {
         branchArrayAdd(ba, branchCreate(tree->leavesNum));
@@ -39,14 +38,7 @@ BranchArray* treeToBranchModified(Tree* tree, int* permutation)
         tree->leaves[i]->color = BLACK;
     }
 
-    if (tree->nodes[0]->name == 0)
-    {
-        curNode = tree->nodes[0];
-    }
-    else
-    {
-        curNode = tree->nodes[1];
-    }
+    curNode = tree->nodes[tree->rootId];
 
     nodeStackPush(stack, curNode);
     curNode->color = GREY;
@@ -76,6 +68,7 @@ BranchArray* treeToBranchModified(Tree* tree, int* permutation)
                 {
                     ba->array[curNode->pos]->branch[j] |= \
                             ba->array[curNode->neighbours[i]->pos]->branch[j];
+                    //branchPrint(ba->array[curNode->pos]);
                 }
             }
             nodeStackPop(stack);
@@ -90,7 +83,8 @@ BranchArray* treeToBranchModified(Tree* tree, int* permutation)
 
     for(i = 0; i < result->size; ++i)
     {
-        branchNormalize(result->array[i]);
+        //branchNormalize(result->array[i]);
+        branchPrint(result->array[i]);
     }
 
     branchArrayDelete(ba);
@@ -175,64 +169,142 @@ void treesPrune(Tree* tree1, Tree* tree2)
     return;
 }
 
+Tree* treeRoot(Tree* tree, unsigned nodeID, unsigned neighbourID, char newTree){
+	int i;
+	Node* root;
+	Node* prevNode;
+	Tree* result;
 
-unsigned* treeTopSort(Tree* tree, unsigned* setPermutation){
-    int i, j, k, count;
-    unsigned* result;
+	if (tree == 0)
+	{
+	    fprintf(stderr, "Error, null tree pointer, Tree:treeRoot\n");
+	    exit(1);
+	}
+	if (tree->leavesNum == 0)
+	{
+	    fprintf(stderr, "Error, cant add to empty tree, Tree:treeRoot\n");
+	    exit(1);
+	}
+	if (nodeID >= tree->nodesNum)
+	{
+       fprintf(stderr, "Error, node index is out, Tree:treeRoot\n");
+        exit(1);
+    }
+	if (neighbourID >= tree->nodes[nodeID]->neiNum)
+    {
+        fprintf(stderr, "Error, neighbour index is out of range, (%d of %d)\
+                Tree:treeRoot\n", neighbourID, tree->nodes[nodeID]->neiNum);
+       exit(1);
+    }
+	result = tree;
+	if (newTree)
+	{
+		result = treeCopy(tree, 0);
+	}
+	root = nodeCreate();
+	root->pos = result->nodesNum;
 
-    result = (unsigned*)calloc(sizeof(unsigned), tree->nodesNum);
-    for (i=0; i < tree->leavesNum; i++){
-        tree->leaves[i]->color = BLACK;
-        result[i] = tree->leaves[i]->pos;
-    }
-    count = tree->leavesNum;
-    while (count < tree->nodesNum){
-        for (j = 0; j < tree->nodesNum; j++){
-            if (tree->nodes[j]->neiNum > 1){
-                for (k = 0; k < tree->nodes[j]->neiNum; k++){
-                    if (tree->nodes[j]->neighbours[k]->color == BLACK){
-                        tree->nodes[j]->color = GREY;
-                    }
-                }
-            }
-        }
+	prevNode = result->nodes[nodeID]->neighbours[neighbourID];
+	result->nodes[nodeID]->neighbours[neighbourID] = root;
 
-        for (j = 0; j < tree->nodesNum; j++){
-            if (tree->nodes[j]->color == GREY){
-                tree->nodes[j]->color = BLACK;
-                result[count] = tree->nodes[j]->pos;
-                count++;
-            }
-        }
-    }
-    treeWash(tree);
-    for (i = 0; i < tree->nodesNum; i++){
-    	for (j = 0; j < tree->nodesNum; j++){
-    		if (i == result[j])
-    			setPermutation[i] = j;
-    	}
-    }
-    return result;
+	for(i = 0; i < prevNode->neiNum; i++) {
+	    if (prevNode->neighbours[i] == result->nodes[nodeID]){
+	    	prevNode->neighbours[i] = root;
+	        break;
+	    }
+	}
+	nodeAddNeighbour(root, result->nodes[nodeID], 0);
+	nodeAddNeighbour(root, prevNode, 0);
+	result->nodesNum += 1;
+	result->nodes = realloc(result->nodes, sizeof(Node*) * (result->nodesNum));
+	result->nodes[result->nodesNum - 1] = root;
+	result->rootId = root->pos;//rooting of the tree done
+	//printf("%zd\t%s\n", tree->rootId, "rootId");
+	//free(prevNode);
+	return result;
 }
+
+void topSortCycle(Node* node, unsigned* result, unsigned maxNum){
+	int j, count;
+	//printf("%d\n", node->pos);
+	count = maxNum - 1;
+	printf("%d\t%s\n", node->pos, "node pos in cycle");
+	if (node->neiNum > 1){
+		node->color = BLACK;
+		result[count] = node->pos;
+		for (j = 0; j < node->neiNum; j++){
+			if (node->neighbours[j]->color != BLACK){
+				topSortCycle(node->neighbours[j], result, count);
+			}
+		}
+	}
+	else{
+		if (node->color != BLACK){
+			node->color = BLACK;
+			printf("%d\t%s\n", node->pos, "leaf pos in cycle 3");
+			result[count] = node->pos;
+		}
+	}
+}
+
+
+unsigned* treeRootAndTopSort(Tree* tree, unsigned nodeID, unsigned neighbourID, unsigned* setPermutation){
+	int i, j;
+	unsigned* result;
+	Node* root;
+	Node* prevNode;
+	NodeStack* treeStack;
+
+	tree = treeRoot(tree, nodeID, neighbourID, 0);
+	root = tree->nodes[tree->rootId];
+	treeStack = nodeStackCreate(tree->nodesNum);
+	result = (unsigned*)calloc(sizeof(unsigned), tree->nodesNum);
+	treeWash(tree);
+	stackCycle(root, treeStack);
+	while (treeStack->curSize != 0)
+	{
+		i = tree->nodesNum - treeStack->curSize;
+		prevNode = nodeStackPeek(treeStack);
+		result[i] = prevNode->pos;
+		nodeStackPop(treeStack);
+	}
+	nodeStackDelete(treeStack);
+	//free(root);
+	//free(prevNode);
+	//topSortCycle(root, result, tree->nodesNum);
+	treeWash(tree);
+	for (i = 0; i < tree->nodesNum; i++){
+		for (j = 0; j < tree->nodesNum; j++){
+	    	if (i == result[j]){
+	    		setPermutation[i] = j;
+	    	}
+	    }
+	 }
+	//printf("%d\t%s\n", tree->leaves[0]->pos, "first leaf pos aftre sort");
+	//printf("%d\t%s\n", root->pos, "root pos after sort");
+	/*here seems to be OK*/
+	return result;
+}
+
 
 int* calculateLeavesPermutation(Tree* tree1, Tree* tree2){
     int i;
     char** leaves1;
     char** leaves2;
     int* permutation;
-
     leaves1 = (char**)malloc(sizeof(char*) * tree1->leavesNum);
     leaves2 = (char**)malloc(sizeof(char*) * tree2->leavesNum);
-
-    for (i = 0; i < tree1->leavesNum; i++)
+    for (i = 0; i < tree1->leavesNum; i++){
         leaves1[i] = tree1->leaves[i]->name;
-    for (i = 0; i < tree2->leavesNum; i++)
+    }
+    for (i = 0; i < tree2->leavesNum; i++){
         leaves2[i] = tree2->leaves[i]->name;
+    }
     permutation = calculatePermutation(leaves1, leaves2, tree1->leavesNum);
     return permutation;
 }
 
-int branchGetLeavesPosNum(Branch* br, unsigned leavesNum, unsigned maxNum)
+int branchGetLeavesPosNum(Branch* br)
 {
     unsigned i = 0;
     unsigned j = 0;
@@ -249,16 +321,22 @@ int branchGetLeavesPosNum(Branch* br, unsigned leavesNum, unsigned maxNum)
                 curSize++;
             }
             j += k + 1;
-            if (curSize >= maxNum)
-            {
-                return NULL;
-            }
         }
-    }
+    }/*
+	int curSize = 0;
+	int i;
+	INT a;
+	a = br->branch[0];
+	while (a > 0){
+		curSize += a%2;
+		a = a/2;
+	}*/
+    branchPrint(br);
+    printf("%d%s\n", curSize, " cursize");
     return curSize;
 }
 
-int* countVariants(Branch*** TAB, int a, int w, int b, int c, int x, int y, unsigned leavesNum, unsigned maxNum)
+int* countVariants(Branch*** TAB, int a, int w, int b, int c, int x, int y)
 {
     int* variants;
     int* result;
@@ -270,28 +348,28 @@ int* countVariants(Branch*** TAB, int a, int w, int b, int c, int x, int y, unsi
     for (i = 0; i < 8; i++)
     	variants[i] = 0;
     if (TAB[b][x] != NULL){
-    	variants[0] = branchGetLeavesPosNum(TAB[b][x], leavesNum, maxNum);
+    	variants[0] = branchGetLeavesPosNum(TAB[b][x]);
     }
     if (TAB[c][y] != NULL){
-    	variants[1] = branchGetLeavesPosNum(TAB[c][y], leavesNum, maxNum);
+    	variants[1] = branchGetLeavesPosNum(TAB[c][y]);
         }
     if (TAB[b][y] != NULL){
-        	variants[2] = branchGetLeavesPosNum(TAB[b][y], leavesNum, maxNum);
+        	variants[2] = branchGetLeavesPosNum(TAB[b][y]);
         }
     if (TAB[c][x] != NULL){
-        	variants[3] = branchGetLeavesPosNum(TAB[c][x], leavesNum, maxNum);
+        	variants[3] = branchGetLeavesPosNum(TAB[c][x]);
         }
     if (TAB[a][x] != NULL){
-        	variants[4] = branchGetLeavesPosNum(TAB[a][x], leavesNum, maxNum);
+        	variants[4] = branchGetLeavesPosNum(TAB[a][x]);
         }
     if (TAB[a][y] != NULL){
-        	variants[5] = branchGetLeavesPosNum(TAB[a][y], leavesNum, maxNum);
+        	variants[5] = branchGetLeavesPosNum(TAB[a][y]);
     }
     if (TAB[b][w] != NULL){
-        	variants[6] = branchGetLeavesPosNum(TAB[b][w], leavesNum, maxNum);
+        	variants[6] = branchGetLeavesPosNum(TAB[b][w]);
         }
     if (TAB[c][w] != NULL){
-        	variants[7] = branchGetLeavesPosNum(TAB[c][w], leavesNum, maxNum);
+        	variants[7] = branchGetLeavesPosNum(TAB[c][w]);
         }
     result[0] = variants[0] + variants[1];
     result[1] = variants[2] + variants[3];
@@ -319,22 +397,126 @@ Branch* branchOR(Branch* br1, Branch* br2)
     return orBranch;
 }
 
+
+
+unsigned* getTreeLeavesPos(Tree* tree){
+	unsigned* leavesPosArr;
+	int i, j;
+	leavesPosArr = (unsigned*)calloc(sizeof(unsigned), tree->nodesNum);
+	for (i = 0;  i < tree->nodesNum; i++){
+		leavesPosArr[i] = 0;
+	}
+	for (i = 0; i < tree->leavesNum; i++){
+		printf("%d%s\n", i, " i");
+		printf("%d%s\n", tree->leaves[i]->pos, " leaf pos in nodes");
+		printf("%d%s\n", leavesPosArr[tree->leaves[i]->pos], " leavesPosArr1[i] - 1");
+		leavesPosArr[tree->leaves[i]->pos] = i;
+		printf("%d%s\n", leavesPosArr[tree->leaves[i]->pos], " leavesPosArr1[i] - 2");
+	}
+	for (i = 0;  i < tree->nodesNum; i++){
+		printf("%d%s\n", leavesPosArr[i], " leavesPosArr1[i] - 3");
+		}
+	return leavesPosArr;
+}
+
+unsigned* branchToLeavesArr(Branch* br, unsigned leavesNum){
+	int i, j;
+	int curInt;
+    int curPos = 0;
+    int* leavesPosArr;
+    leavesPosArr = (unsigned*)calloc(sizeof(unsigned), leavesNum);
+    for (i = 0; i < leavesNum; i++){
+    	leavesPosArr[i] = 0; //no leaf
+    }
+    for (i = 0; i < branchGetIntSize(br); ++i){
+    	curInt = br->branch[i];
+    	for (j = 0; j < intSize; ++j){
+    		if (curInt & 1 == 1){
+    			printf("%s%d\n", "Leaf at pos ",  curPos);
+    			leavesPosArr[curPos] = 1;
+    		}
+    		++curPos;
+    		curInt >>=1;
+    	}
+    }
+    return leavesPosArr;
+}
+
 Tree* makeMAST(Branch*** TAB, Tree* tree1, unsigned nodesNum2, unsigned* set1)
 {
 	Tree* result;
 	Branch* br;
-	size_t* leavesPos;
-	size_t mastLeavesNum = 0;
+	//size_t* leavesPos;
+	unsigned* leavesPosArr;
+	//size_t mastLeavesNum = 0;
+	//size_t buffer = 0;
 	char** leavesToDelete;
 	int i, count;
-	unsigned leavesToDeleteAmount;
-	count = 0;
+	unsigned leavesToDeleteAmount = 0;
+	treeWash(tree1);
 	br = TAB[tree1->nodesNum - 1][nodesNum2 - 1];
-	leavesPos = branchGetLeavesPos(br, &mastLeavesNum, (size_t) tree1->leavesNum);
+	printf("%s\n", "see here");
+	branchPrint(br);
+	result = treeCreate();
+	leavesPosArr = branchToLeavesArr(br, tree1->leavesNum); //now we have list for needed and unneeded leaves
+	for (i = 0; i < tree1->leavesNum; i++){
+		if (leavesPosArr[i] == 0){
+			leavesToDeleteAmount++;
+		}
+	}
+	printf("%d\n", leavesToDeleteAmount);
+	if (leavesToDeleteAmount == 0){
+		printf("%s\n", "mast is full tree");
+		result = treeCopy(tree1, 0);
+		printf("%s\n", treeToString(result));
+		return result;
+	}
+	else if (leavesToDeleteAmount == tree1->leavesNum){
+		printf("%s\n", "trees dont match");
+		printf("%s\n", treeToString(result));
+		return result;
+	}
+	else {//some leaves are to be deleted
+		leavesToDelete = (char**)malloc(sizeof(char*) * (leavesToDeleteAmount));
+		result = treeCopy(tree1, 0);
+		count = 0;
+		for (i = 0; i < tree1->leavesNum; i++){
+			if (leavesPosArr[i] == 0){
+				leavesToDelete[count] = tree1->leaves[i]->name;
+				count++;
+			}
+		}
+		if (count > (leavesToDeleteAmount)){
+			perror("makeMast broken\n");
+		}
+		result = deleteLeaves(result, leavesToDelete, count);
+		printf("%s\n", treeToString(result));
+		return result;
+	}
+	//mastLeavesNum = branchGetLeavesPosNum(br);
+	//printf("%d%s\n", intSize, " intsize");
+
+	/*//printf("%zu\t%s\n", mastLeavesNum, "mastleavesNum1");
+	//buffer = mastLeavesNum;
+	//printf("%zu%s\n", buffer, " buffer before");
+	//leavesPos = branchGetLeavesPos(br, &buffer, (size_t) tree1->leavesNum); //so here smth strange happens
+	//printf("%zu%s\n", buffer, " buffer after");
+	//for (i = 0; i < buffer; i++){
+	//	printf("%zu\n", leavesPos[i]);
+	//}
+
+	//printf("%zu\t%s\n", mastLeavesNum, "mastleavesNum2");
+
 	leavesToDeleteAmount = tree1->leavesNum - ((unsigned) mastLeavesNum);
+
+	printf("%d\t%s\n", leavesToDeleteAmount, "leavestodeleteamount2");
+
 	leavesToDelete = (char**)malloc(sizeof(char*) * (leavesToDeleteAmount));
+	printf("%s\n", "leavesToDeleteAmount successfully count");
+	//printf("%d\n", (int) mastLeavesNum);
 	for (i = 0; i < (int) mastLeavesNum; i++)
 	{
+		printf("%zu\n", leavesPos[i]);
 		tree1->leaves[leavesPos[i]]->color = BLACK;
 	}
 	for (i = 0; i < tree1->leavesNum; i++)
@@ -348,13 +530,20 @@ Tree* makeMAST(Branch*** TAB, Tree* tree1, unsigned nodesNum2, unsigned* set1)
 			perror("makeMast broken\n");
 		}
 	}
+	printf("%d%s\n", leavesToDeleteAmount, " HEEEEEEEEEY");
 	treeWash(tree1);
 	result = treeCreate();
-	result = treeCopy(tree1, 0);
-	result = deleteLeaves(result, leavesToDelete, count);
+	printf("%s\n", "here we go");
+	//result = treeCopy(tree1, 0);
+	result = tree1;
+	printf("%s\n", "here we go");
+	if (leavesToDeleteAmount > 0){
+		result = deleteLeaves(result, leavesToDelete, count);
+	}
 	printf("makeMast in progress\n");
-	//printf("%s\n", treeToString(result));
-	return result;
+	printf("%s\n", treeToString(tree1));
+	printf("%s\n", treeToString(result));
+	return result;*/
 }
 
 void MAST(Tree* tree1, Tree* tree2)
@@ -366,6 +555,8 @@ void MAST(Tree* tree1, Tree* tree2)
     int a, w;
     int* variants;
     int* permutation;
+    unsigned* leavesPosArr1;
+    unsigned* leavesPosArr2;
     unsigned* setPermutation1;//for every node of tree1 tells its pos in topologically sorted set
     unsigned* setPermutation2;//the same for tree2
     unsigned* set1;
@@ -378,9 +569,20 @@ void MAST(Tree* tree1, Tree* tree2)
 
     treesPrune(tree1, tree2);
     printf("%d\t%d\n", tree1->leavesNum, tree2->leavesNum);
+    printf("%d\t%d\n", tree1->nodesNum, tree2->nodesNum);
+    setPermutation1 = (unsigned*)calloc(sizeof(unsigned), tree1->nodesNum + 1);
+    setPermutation2 = (unsigned*)calloc(sizeof(unsigned), tree2->nodesNum + 1);
+    set1 = treeRootAndTopSort(tree1, 1, 0, setPermutation1); //topologically sorted nodes from rooted tree1
+    set2 = treeRootAndTopSort(tree2, 1, 0, setPermutation2); //topologically sorted nodes from rooted tree2
+    /*^here trees became rooted^*/
+    printf("%d\t%d\n", tree1->leavesNum, tree2->leavesNum);
+    printf("%d\t%d\n", tree1->nodesNum, tree2->nodesNum);
     permutation = calculateLeavesPermutation(tree1, tree2);
-    branchArr1 = treeToBranchModified(tree1, getRange(0, tree1->leavesNum));
-    branchArr2 = treeToBranchModified(tree2, permutation);
+    branchArr1 = treeRootedToBranchArray(tree1, getRange(0, tree1->leavesNum));
+    branchArr2 = treeRootedToBranchArray(tree2, permutation);
+    leavesPosArr1 = getTreeLeavesPos(tree1);
+    leavesPosArr2 = getTreeLeavesPos(tree2);
+    printf("%s\n", "deBug goes well");
     TAB = (Branch***)calloc(sizeof(Branch**), tree1->nodesNum);
     for(i = 0; i < tree1->nodesNum; i++){
         TAB[i] = (Branch**)calloc(sizeof(Branch*), tree2->nodesNum);
@@ -390,22 +592,25 @@ void MAST(Tree* tree1, Tree* tree2)
             TAB[i][j] = NULL;
         }
     }
-    setPermutation1 = (unsigned*)calloc(sizeof(unsigned), tree1->nodesNum);
-    setPermutation2 = (unsigned*)calloc(sizeof(unsigned), tree2->nodesNum);
-    set1 = treeTopSort(tree1, setPermutation1); //topologically sorted nodes from tree1
-    set2 = treeTopSort(tree2, setPermutation2); //topologically sorted nodes from tree2
+    for (i = 0; i < branchArr1->size; i++){
+    	branchPrint(branchArr1->array[i]);
+    }
 
+    for (i = 0; i < tree1->nodesNum; i++){
+    	printf("%d\n", set1[i]);
+    }
     //this is where algorithm starts
     posT = 0;
     for (a = 0; a < tree1->nodesNum; a++){ // Until all lines in TAB are filled
         posU = 0;
         for (w = 0; w < tree2->nodesNum; w++){ //Until all cells in line are filled
+        	b = 0; c = 0; x = 0; y = 0;
             if (tree1->nodes[set1[a]]->neiNum == 1 || tree2->nodes[set2[w]]->neiNum == 1){ //if a or w is a leaf
                 if (tree1->nodes[set1[a]]->neiNum == 1 && tree2->nodes[set2[w]]->neiNum == 1){ // if a AND w are leaves
                     if (strcmp(tree1->nodes[set1[a]]->name, tree2->nodes[set2[w]]->name) == 0){// a and w are equal leaves (&& set1[a] == permutation[set2[w]]) !!!
                     	intersection = branchCreate(tree1->leavesNum);
                     	p = 1;
-                    	p = p << (set1[a] & (intSize - 1));
+                    	p = p << (leavesPosArr1[set1[a]] & (intSize - 1));
                     	intersection->branch[set1[a] / intSize] |= p;
                     	branchPrint(intersection);
                         TAB[posT][posU] = intersection;
@@ -420,7 +625,7 @@ void MAST(Tree* tree1, Tree* tree2)
             	   intersection = branchCreate(tree1->leavesNum);
             	   if (tree1->nodes[set1[a]]->neiNum == 1){ //a is a leaf, w is a subtree
             		   p = 1;
-            		   p = p << (set1[a] & (intSize - 1));
+            		   p = p << (leavesPosArr1[set1[a]] & (intSize - 1));
             		   intersection->branch[set1[a] / intSize] |= p;
             		   intersection = branchAnd(intersection, branchArr2->array[set2[w]]);
             		   branchPrint(intersection);
@@ -428,7 +633,7 @@ void MAST(Tree* tree1, Tree* tree2)
             	   }
             	   else{ //a is a subtree, w is a leaf
             		   p = 1;
-            		   p = p << (set2[w] & (intSize - 1));
+            		   p = p << (leavesPosArr2[set2[w]] & (intSize - 1));
             		   intersection->branch[set2[w] / intSize] |= p;
             		   intersection = branchAnd(intersection, branchArr1->array[set1[a]]);
             		   branchPrint(intersection);
@@ -441,33 +646,46 @@ void MAST(Tree* tree1, Tree* tree2)
             	for (i = 0; i < tree1->nodes[set1[a]]->neiNum; i++){
             		if (setPermutation1[tree1->nodes[set1[a]]->neighbours[i]->pos] < a){
             			b = setPermutation1[tree1->nodes[set1[a]]->neighbours[i]->pos];
+            			break;
             		}
-            		if ((setPermutation1[tree1->nodes[set1[a]]->neighbours[i]->pos] < a) && (setPermutation1[tree1->nodes[set1[a]]->neighbours[i]->pos] != b)){
+            	}
+            	for (i = 0; i < tree1->nodes[set1[a]]->neiNum; i++){
+            		if ((setPermutation1[tree1->nodes[set1[a]]->neighbours[i]->pos] < a) \
+            				&& (setPermutation1[tree1->nodes[set1[a]]->neighbours[i]->pos] != b)){
             			c = setPermutation1[tree1->nodes[set1[a]]->neighbours[i]->pos];
+            			break;
             		}
             	}
             	for (j = 0; j < tree2->nodes[set2[w]]->neiNum; j++){
             		if (setPermutation2[tree2->nodes[set2[w]]->neighbours[j]->pos] < w){
             			x = setPermutation2[tree2->nodes[set2[w]]->neighbours[j]->pos];
+            			break;
             		}
-            		if ((setPermutation2[tree2->nodes[set2[w]]->neighbours[j]->pos] < w) && (setPermutation2[tree2->nodes[set2[w]]->neighbours[j]->pos] != x)){
+            	}
+            	for (j = 0; j < tree2->nodes[set2[w]]->neiNum; j++){
+            		if ((setPermutation2[tree2->nodes[set2[w]]->neighbours[j]->pos] < w) \
+            				&& (setPermutation2[tree2->nodes[set2[w]]->neighbours[j]->pos] != x)){
             			y = setPermutation2[tree2->nodes[set2[w]]->neighbours[j]->pos];
+            			break;
             		}
-            	}//get b, c, x, y
-            	printf("%d\t%d\t%d\t%d\t%d\t%d\n", a, b, c, w, x, y);
+            	}
+            	//get b, c, x, y
+            	//printf("%d\t%d\t%d\t%d\t%d\t%d\n", set1[a], set1[b], set1[c], set2[w], set2[x], set2[y]);
 
 
-                variants = countVariants(TAB, a, w, b, c, x, y, tree1->leavesNum, tree1->nodesNum);
+                variants = countVariants(TAB, a, w, b, c, x, y);
                 //printf("countVariants done\n");
                 k = 0;
                 j = 0;
                 for(i = 0; i < 6; i++){
+                	//printf("%d\t%s\n", variants[i], "variant");
                     if (variants[i] > j){
                         j = variants[i];
                         k = i;
                     }
                 }
-                if (j == 0) // all subtrees are NULL
+                //printf("%d\t%s\n", k, "k");
+                if (j == -1) // check if needed!!!
                     TAB[posT][posU] = NULL;
                 else{//a real case
                     switch (k){
@@ -508,13 +726,12 @@ void MAST(Tree* tree1, Tree* tree2)
                     default:
                         perror("Something has gone wrong...\n");
                     }
+                    branchPrint(TAB[posT][posU]);
                 }
             }
-            //printf("%s%d\n", "posU", posU);
             posU++;
         }
         posT++;
-        //printf("%s%d\n", "posT", posT);
     }
     printf("%s\n", "Tree extraction started");
     result = makeMAST(TAB,tree1, tree2->nodesNum, set1);
@@ -536,8 +753,8 @@ int main(int argc, char** argv){
     puts("HIIIII 1");
     tree1 = treeRead(argv[1]);
     tree2 = treeRead(argv[2]);
-    printf("%d\n", tree1->nodesNum);
-    printf("%d\n", tree2->nodesNum);
+    //printf("%d\n", tree1->nodesNum);
+    //printf("%d\n", tree2->nodesNum);
     puts("HIIIII 2");
     MAST(tree1, tree2);
     puts("BYE");
@@ -558,70 +775,63 @@ int main(int argc, char** argv){
 
 /*
 
-int* countVariants(Branch*** TAB, int a, int w, int b, int c, int x, int y){
-    int* variants;
-    int* result;
-    int i, k;
+void topSortCycle(Node* node, unsigned* result, unsigned maxNum){
+	int j, count;
+	printf("%d\n", node->pos);
+	count = maxNum - 1;
+	if (node->neiNum > 1){
+		node->color = BLACK;
+		result[count] = node->pos;
+		for (j = 0; j < node->neiNum; j++){
+			if (node->neighbours[j]->color != BLACK){
+				topSortCycle(node->neighbours[j], result, count);
+			}
+		}
+	}
+	else{
+		if (node->color != BLACK){
+			node->color = BLACK;
+			result[count] = node->pos;
+		}
+	}
+}
 
-    printf("countVariants started\n");
-    variants = (int*)calloc(sizeof(int), 8);
-    result = (int*)calloc(sizeof(int), 6);
-    for (i = 0; i < 8; i++)
-    	variants[i] = 0;
-    if (TAB[b][x] != NULL){
-    	for (i = 0; i < TAB[b][x]->size; i++){
-    		if(TAB[b][x]->branch[i] == 1)
-    			variants[0]++;
+/*unsigned* treeTopSort(Tree* tree, unsigned* setPermutation){
+    int i, j, k, count;
+    unsigned* result;
+
+    result = (unsigned*)calloc(sizeof(unsigned), tree->nodesNum);
+    for (i=0; i < tree->leavesNum; i++){
+        tree->leaves[i]->color = BLACK;
+        result[i] = tree->leaves[i]->pos;
+    }
+    count = tree->leavesNum;
+    while (count < tree->nodesNum){
+        for (j = 0; j < tree->nodesNum; j++){
+            if (tree->nodes[j]->neiNum > 1){
+                for (k = 0; k < tree->nodes[j]->neiNum; k++){
+                    if (tree->nodes[j]->neighbours[k]->color == BLACK){
+                        tree->nodes[j]->color = GREY;
+                    }
+                }
+            }
+        }
+
+        for (j = 0; j < tree->nodesNum; j++){
+            if (tree->nodes[j]->color == GREY){
+                tree->nodes[j]->color = BLACK;
+                result[count] = tree->nodes[j]->pos;
+                count++;
+            }
+        }
+    }
+    treeWash(tree);
+    for (i = 0; i < tree->nodesNum; i++){
+    	for (j = 0; j < tree->nodesNum; j++){
+    		if (i == result[j])
+    			setPermutation[i] = j;
     	}
     }
-    if (TAB[c][y] != NULL){
-        	for (i = 0; i < TAB[c][y]->size; i++){
-        		if(TAB[c][y]->branch[i] == 1)
-        			variants[1]++;
-        	}
-        }
-    if (TAB[b][y] != NULL){
-        	for (i = 0; i < TAB[b][y]->size; i++){
-        		if(TAB[b][y]->branch[i] == 1)
-        			variants[2]++;
-        	}
-        }
-    if (TAB[c][x] != NULL){
-        	for (i = 0; i < TAB[c][x]->size; i++){
-        		if(TAB[c][x]->branch[i] == 1)
-        			variants[3]++;
-        	}
-        }
-    if (TAB[a][x] != NULL){
-        	for (i = 0; i < TAB[a][x]->size; i++){
-        		if(TAB[a][x]->branch[i] == 1)
-        			variants[4]++;
-        	}
-        }
-    if (TAB[a][y] != NULL){
-        	for (i = 0; i < TAB[a][y]->size; i++){
-        		if(TAB[a][y]->branch[i] == 1)
-        			variants[5]++;
-        	}
-        }
-    if (TAB[b][w] != NULL){
-        	for (i = 0; i < TAB[b][w]->size; i++){
-        		if(TAB[b][w]->branch[i] == 1)
-        			variants[6]++;
-        	}
-        }
-    if (TAB[c][w] != NULL){
-        	for (i = 0; i < TAB[c][w]->size; i++){
-        		if(TAB[c][w]->branch[i] == 1)
-        			variants[7]++;
-        	}
-        }
-    result[0] = variants[0] + variants[1];
-    result[1] = variants[2] + variants[3];
-    result[2] = variants[4];
-    result[3] = variants[5];
-    result[4] = variants[6];
-    result[5] = variants[7];
     return result;
 }
 
@@ -846,7 +1056,4 @@ void MAST(Tree* tree1, Tree* tree2)
     printf("%s\n", treeToString(TAB[a][w]));
 }
 */
-
-
-
 
