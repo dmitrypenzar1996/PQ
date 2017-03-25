@@ -33,7 +33,7 @@ unsigned countZeroRightNum(INT p)
           20, 8, 19, 18
     };
 
-    r = Mod37BitPosition[(-v & v) % 37];
+    r = Mod37BitPosition[(- ((int)v) & ((int)v) ) % 37];
     return r;
 }
 
@@ -52,18 +52,20 @@ size_t* branchGetLeavesPos(Branch* br, size_t* leavesNum, size_t maxNum)
         while(j < intSize)
         {
             k = countZeroRightNum((br->branch[i]) >> j);              
-            if (k != 32)
+            if (k < 32)
             {
                 positions[curSize++] = k + j +  i * intSize;
             }
             j += k + 1;
             if (curSize >= maxNum)
             {
-                free(positions);
-                *leavesNum = 0;
-                return NULL;
+		    break;
             }
         }
+	if (curSize >= maxNum)
+	{
+		break;
+	}
     }
     positions = realloc(positions, sizeof(size_t) * curSize);
     *leavesNum = curSize;
