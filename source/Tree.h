@@ -17,7 +17,7 @@ typedef struct Node
 {
     char* name; // null if internal
     struct Node** neighbours;
-    unsigned* dist;
+    double* dist;
     Color color;
     char neiNum;
     char maxNeiNum;
@@ -57,10 +57,10 @@ void nodeStackPop(NodeStack* stack);
 Node* nodeCreate(void);
 Node* leafCreate(char* name);
 void nodeDelete(Node* node);
-void nodeAddNeighbour(Node* node, Node* neighbour, unsigned dist);
+void nodeAddNeighbour(Node* node, Node* neighbour, double dist);
 Tree* treeCreate(void);
 void treeDelete(Tree* tree);
-unsigned readLength(char* string, unsigned* pos);
+double readLength(char* string, unsigned* pos);
 char* readName(char* string, unsigned* pos);
 Tree* treeCopy(Tree* source, char copyLCAFinder);
 Tree* treeFromNewick(char* newick);
@@ -89,8 +89,9 @@ Tree* treeSPRMove(Tree* tree, unsigned sourceNodeID, unsigned sourceNeiID,\
               char newTree, char calcLCAFinder);
 
 unsigned treeFindLCA(Tree* tree, unsigned node1ID, unsigned node2ID);
-
-unsigned treeGetDist(Tree* tree, unsigned leaf1ID, unsigned leaf2ID);
+unsigned treeGetDist(Tree* tree, unsigned node1ID, unsigned node2ID);
 char* treeConsensusToString(Tree* tree);
 void treeConsensusWrite(Tree* tree, char* outFileName);
+Tree* treePrune(Tree* source, char** leavesNames, size_t leavesNum,
+        char calculateLcaFinder);
 #endif
