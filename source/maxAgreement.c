@@ -493,57 +493,7 @@ Tree* makeMAST(Branch*** TAB, Tree* tree1, unsigned nodesNum2, unsigned* set1)
 		printf("%s\n", treeToString(result));
 		return result;
 	}
-	//mastLeavesNum = branchGetLeavesPosNum(br);
-	//printf("%d%s\n", intSize, " intsize");
-
-	/*//printf("%zu\t%s\n", mastLeavesNum, "mastleavesNum1");
-	//buffer = mastLeavesNum;
-	//printf("%zu%s\n", buffer, " buffer before");
-	//leavesPos = branchGetLeavesPos(br, &buffer, (size_t) tree1->leavesNum); //so here smth strange happens
-	//printf("%zu%s\n", buffer, " buffer after");
-	//for (i = 0; i < buffer; i++){
-	//	printf("%zu\n", leavesPos[i]);
-	//}
-
-	//printf("%zu\t%s\n", mastLeavesNum, "mastleavesNum2");
-
-	leavesToDeleteAmount = tree1->leavesNum - ((unsigned) mastLeavesNum);
-
-	printf("%d\t%s\n", leavesToDeleteAmount, "leavestodeleteamount2");
-
-	leavesToDelete = (char**)malloc(sizeof(char*) * (leavesToDeleteAmount));
-	printf("%s\n", "leavesToDeleteAmount successfully count");
-	//printf("%d\n", (int) mastLeavesNum);
-	for (i = 0; i < (int) mastLeavesNum; i++)
-	{
-		printf("%zu\n", leavesPos[i]);
-		tree1->leaves[leavesPos[i]]->color = BLACK;
-	}
-	for (i = 0; i < tree1->leavesNum; i++)
-	{
-		if (tree1->leaves[i]->color != BLACK)
-		{
-			leavesToDelete[count] = tree1->leaves[i]->name;
-			count++;
-		}
-		if (count > (leavesToDeleteAmount)){
-			perror("makeMast broken\n");
-		}
-	}
-	printf("%d%s\n", leavesToDeleteAmount, " HEEEEEEEEEY");
-	treeWash(tree1);
-	result = treeCreate();
-	printf("%s\n", "here we go");
-	//result = treeCopy(tree1, 0);
-	result = tree1;
-	printf("%s\n", "here we go");
-	if (leavesToDeleteAmount > 0){
-		result = deleteLeaves(result, leavesToDelete, count);
-	}
-	printf("makeMast in progress\n");
-	printf("%s\n", treeToString(tree1));
-	printf("%s\n", treeToString(result));
-	return result;*/
+	/**/
 }
 
 void MAST(Tree* tree1, Tree* tree2)
@@ -1055,5 +1005,57 @@ void MAST(Tree* tree1, Tree* tree2)
     }
     printf("%s\n", treeToString(TAB[a][w]));
 }
+
+//mastLeavesNum = branchGetLeavesPosNum(br);
+	//printf("%d%s\n", intSize, " intsize");
+
+	//printf("%zu\t%s\n", mastLeavesNum, "mastleavesNum1");
+	//buffer = mastLeavesNum;
+	//printf("%zu%s\n", buffer, " buffer before");
+	//leavesPos = branchGetLeavesPos(br, &buffer, (size_t) tree1->leavesNum); //so here smth strange happens
+	//printf("%zu%s\n", buffer, " buffer after");
+	//for (i = 0; i < buffer; i++){
+	//	printf("%zu\n", leavesPos[i]);
+	//}
+
+	//printf("%zu\t%s\n", mastLeavesNum, "mastleavesNum2");
+
+	leavesToDeleteAmount = tree1->leavesNum - ((unsigned) mastLeavesNum);
+
+	printf("%d\t%s\n", leavesToDeleteAmount, "leavestodeleteamount2");
+
+	leavesToDelete = (char**)malloc(sizeof(char*) * (leavesToDeleteAmount));
+	printf("%s\n", "leavesToDeleteAmount successfully count");
+	//printf("%d\n", (int) mastLeavesNum);
+	for (i = 0; i < (int) mastLeavesNum; i++)
+	{
+		printf("%zu\n", leavesPos[i]);
+		tree1->leaves[leavesPos[i]]->color = BLACK;
+	}
+	for (i = 0; i < tree1->leavesNum; i++)
+	{
+		if (tree1->leaves[i]->color != BLACK)
+		{
+			leavesToDelete[count] = tree1->leaves[i]->name;
+			count++;
+		}
+		if (count > (leavesToDeleteAmount)){
+			perror("makeMast broken\n");
+		}
+	}
+	printf("%d%s\n", leavesToDeleteAmount, " HEEEEEEEEEY");
+	treeWash(tree1);
+	result = treeCreate();
+	printf("%s\n", "here we go");
+	//result = treeCopy(tree1, 0);
+	result = tree1;
+	printf("%s\n", "here we go");
+	if (leavesToDeleteAmount > 0){
+		result = deleteLeaves(result, leavesToDelete, count);
+	}
+	printf("makeMast in progress\n");
+	printf("%s\n", treeToString(tree1));
+	printf("%s\n", treeToString(result));
+	return result;
 */
 
