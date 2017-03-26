@@ -10,7 +10,7 @@
 
 BranchArray* treeRootedToBranchArray(Tree* tree, int* permutation);
 Tree* deleteLeaves(Tree* tree, char** leavesToDelete, int leavesToDeleteAmount);
-void treesPrune(Tree* tree1, Tree* tree2);
+Tree** treesPrune(Tree* tree1, Tree* tree2);
 unsigned* treeRootAndTopSort(Tree* tree, unsigned nodeID, unsigned neighbourID, unsigned* setPermutation);
 int* calculateLeavesPermutation(Tree* tree1, Tree* tree2);
 int branchGetLeavesPosNum(Branch* br);
