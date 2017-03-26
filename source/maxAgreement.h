@@ -16,7 +16,7 @@ int* calculateLeavesPermutation(Tree* tree1, Tree* tree2);
 int branchGetLeavesPosNum(Branch* br);
 int* countVariants(Branch*** TAB, int a, int w, int b, int c, int x, int y);
 Branch* branchOR(Branch* br1, Branch* br2);
-unsigned* getTreeLeavesPos(Tree* tree);
+int* getTreeLeavesPos(Tree* tree);
 unsigned* branchToLeavesArr(Branch* br, unsigned leavesNum);
 Tree* makeMAST(Branch*** TAB, Tree* tree1, unsigned nodesNum2, unsigned* set1);
 void MAST(Tree* tree1, Tree* tree2);

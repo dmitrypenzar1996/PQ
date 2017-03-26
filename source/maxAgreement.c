@@ -104,8 +104,6 @@ Tree* deleteLeaves(Tree* tree, char** leavesToDelete, int leavesToDeleteAmount)
 
 Tree** treesPrune(Tree* tree1, Tree* tree2)
 {
-	printf("%s\n", "treesPrune started");
-	printf("%s\t%s\n", treeToString(tree1), treeToString(tree2));
 	int i, j;
 	int count1, count2;
     char** leavesToSave1;
@@ -120,14 +118,10 @@ Tree** treesPrune(Tree* tree1, Tree* tree2)
     leavesToSave1 = (char**)calloc(sizeof(char*), tree1->leavesNum);
     leavesToSave2 = (char**)calloc(sizeof(char*), tree2->leavesNum);
 
-    printf("%d\t%d\n", count1, count2);
     for (i = 0; i < tree1->leavesNum; i++){
     	for (j = 0; j < tree2->leavesNum; j++){
-    		//printf("%d\t%d\t%d\n", i, j, count1);
     		if (strcmp(tree1->leaves[i]->name, tree2->leaves[j]->name) == 0){
-    			//printf("%s\n", tree1->leaves[i]->name);
     			leavesToSave1[count1] = tree1->leaves[i]->name;
-    			printf("%s", leavesToSave1[count1]);
     			count1++;
     			break;
     		}
@@ -138,22 +132,12 @@ Tree** treesPrune(Tree* tree1, Tree* tree2)
     	for (j = 0; j < tree1->leavesNum; j++){
     		if (strcmp(tree2->leaves[i]->name, tree1->leaves[j]->name) == 0){
     			leavesToSave2[count2] = tree2->leaves[i]->name;
-    			printf("%s", leavesToSave2[count2]);
     			count2++;
     			break;
     		}
     	}
     }
-    printf("\n tree2leaves done\n");
-    for (i = 0; i< count1; i++){
-    	printf("%s", leavesToSave1[i]);
-    }
-    printf(" - leaves to save from tree1\n");
-    for (i = 0; i< count2; i++){
-        	printf("%s", leavesToSave2[i]);
-    }
-    printf(" - leaves to save from tree2\n");
-    printf("%d\t%d\n", count1, count2);
+
     if (count1 > tree1->leavesNum){
     	perror("wrong count 1, maxAgreement:treesPrune");
     }
@@ -162,12 +146,8 @@ Tree** treesPrune(Tree* tree1, Tree* tree2)
     }
     leavesToSave1 = realloc(leavesToSave1, (sizeof(char*) * (count1)));
     leavesToSave2 = realloc(leavesToSave2, (sizeof(char*) * (count2)));
-    printf("%d\t%d\t%s\n", count1, count2, "leaves to save");
     result[0] = treePrune(tree1, leavesToSave1, (size_t) count1, 0);
     result[1] = treePrune(tree2, leavesToSave2, (size_t) count2, 0);
-
-    /*
-    */
     /* here is OK */
     return result;
 }
@@ -363,12 +343,12 @@ Branch* branchOR(Branch* br1, Branch* br2)
 
 
 
-unsigned* getTreeLeavesPos(Tree* tree){
-	unsigned* leavesPosArr;
+int* getTreeLeavesPos(Tree* tree){
+	int* leavesPosArr;
 	int i, j;
-	leavesPosArr = (unsigned*)calloc(sizeof(unsigned), tree->nodesNum);
+	leavesPosArr = (int*)calloc(sizeof(int), tree->nodesNum);
 	for (i = 0;  i < tree->nodesNum; i++){
-		leavesPosArr[i] = 0;
+		leavesPosArr[i] = -1;
 	}
 	for (i = 0; i < tree->leavesNum; i++){
 		leavesPosArr[tree->leaves[i]->pos] = i;
@@ -412,7 +392,6 @@ Tree* makeMAST(Branch*** TAB, Tree* tree1, unsigned nodesNum2, unsigned* set1)
 
 	treeWash(tree1);
 	br = TAB[tree1->nodesNum - 1][nodesNum2 - 1];
-	//printf("%s\n", "see here");
 	branchPrint(br);
 	result = treeCreate();
 	leavesPosArr = branchToLeavesArr(br, tree1->leavesNum); //now we have list for needed and unneeded leaves
@@ -423,13 +402,13 @@ Tree* makeMAST(Branch*** TAB, Tree* tree1, unsigned nodesNum2, unsigned* set1)
 	}
 	printf("%d\n", leavesToDeleteAmount);
 	if (leavesToDeleteAmount == 0){
-		printf("%s\n", "trees match completely");
+		printf("%s\n", "pruned trees match completely");
 		result = treeCopy(tree1, 0);
 		printf("%s\n", treeToString(result));
 		return result;
 	}
 	else if (leavesToDeleteAmount == tree1->leavesNum){
-		printf("%s\n", "trees dont match");
+		printf("%s\n", "trees don't match");
 		printf("%s\n", treeToString(result));
 		return result;
 	}
@@ -461,8 +440,8 @@ void MAST(Tree* tree1, Tree* tree2)
     int a, w;
     int* variants;
     int* permutation;			//permutation of leaf sets between tree1 and tree2
-    unsigned* leavesPosArr1;	//size = nodes; for every node has 0, for leaf has its pos in leaves
-    unsigned* leavesPosArr2;	//soon will be updated - will be -1 for nodes that are not leaves
+    int* leavesPosArr1;			//size = nodes; for every node has -1, for leaf has its pos in leaves
+    int* leavesPosArr2;			//the same for tree2
     unsigned* setPermutation1;	//for every node of tree1 tells its pos in topologically sorted set
     unsigned* setPermutation2;	//the same for tree2
     unsigned* set1;				//topologically sorted nodes from rooted tree1
@@ -473,13 +452,14 @@ void MAST(Tree* tree1, Tree* tree2)
     Branch*** TAB;
     Tree* result;
     Tree** prunedTrees;
-    printf("%d\t%d\t%s\n", tree1->leavesNum, tree2->leavesNum, "leavesNum before cleavage");
+
     prunedTrees = treesPrune(tree1, tree2);
     tree1 = prunedTrees[0];
     tree2 = prunedTrees[1];
-    printf("%d\t%d\t%s\n", tree1->leavesNum, tree2->leavesNum, "leavesNum after cleavage");
+
     printf("%s\t%s\n", treeToString(tree1), treeToString(tree2));
     printf("%d\t%d\n", tree1->nodesNum, tree2->nodesNum);
+
     setPermutation1 = (unsigned*)calloc(sizeof(unsigned), tree1->nodesNum + 1);
     setPermutation2 = (unsigned*)calloc(sizeof(unsigned), tree2->nodesNum + 1);
     set1 = treeRootAndTopSort(tree1, 1, 0, setPermutation1);
