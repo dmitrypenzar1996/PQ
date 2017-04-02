@@ -20,8 +20,8 @@ int* countVariants(Branch*** TAB, int a, int w, int b, int c, int x, int y);
 Branch* branchOR(Branch* br1, Branch* br2);
 int* getTreeLeavesPos(Tree* tree);
 unsigned* branchToLeavesArr(Branch* br, unsigned leavesNum);
+int** getAllRoots(Tree* tree);
 Tree* makeMAST(Branch* br, Tree* tree1);
 Branch* MAST(Tree* tree1, Tree* tree2, unsigned* set1, unsigned* set2, unsigned* setPermutation1, unsigned* setPermutation2);
-int** getAllRoots(Tree* tree);
 void UMAST(Tree* tree1, Tree* tree2);
 #endif
