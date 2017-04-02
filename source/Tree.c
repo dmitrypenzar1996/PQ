@@ -145,6 +145,7 @@ Tree* treeCreate()
     tree->leavesNum = 0;
     tree->nodesNum = 0;
     tree->lcaFinder = NULL;
+    tree->rootId = -1;
     return tree;
 } /* treeCreate */
 
@@ -414,6 +415,7 @@ Tree* treeCopy(Tree* source, char copyLCAFinder)
     dest->nodesNum = source->nodesNum;
     dest->nodes = calloc(sizeof(Node*), source->nodesNum);
     dest->leaves = calloc(sizeof(Node*), source->leavesNum);
+    dest->rootId = source->rootId;
 
     for(i = 0; i < source->nodesNum; ++i)
     {
