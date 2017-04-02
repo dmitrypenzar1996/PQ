@@ -39,7 +39,6 @@ typedef struct Tree
     LCAFinder* lcaFinder;
     unsigned leavesNum;
     unsigned nodesNum;
-    ssize_t rootId; //-1 if unrooted, root->pos if rooted
 }Tree;
 
 typedef struct

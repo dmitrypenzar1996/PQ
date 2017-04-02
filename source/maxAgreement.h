@@ -3,21 +3,20 @@
 #include "Tree.h"
 #include "add.h"
 #include "consensus.h"
-#include "CutTree.h"
+#include "growTree.h"
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
 
-BranchArray* treeRootedToBranchArray(Tree* tree, int* permutation);
+BranchArray* treeToBranchModified(Tree* tree, int* permutation);
 Tree* deleteLeaves(Tree* tree, char** leavesToDelete, int leavesToDeleteAmount);
-Tree** treesPrune(Tree* tree1, Tree* tree2);
-unsigned* treeRootAndTopSort(Tree* tree, unsigned nodeID, unsigned neighbourID, unsigned* setPermutation);
+void treesPrune(Tree* tree1, Tree* tree2);
+unsigned* treeTopSort(Tree* tree);
 int* calculateLeavesPermutation(Tree* tree1, Tree* tree2);
-int branchGetLeavesPosNum(Branch* br);
-int* countVariants(Branch*** TAB, int a, int w, int b, int c, int x, int y);
-Branch* branchOR(Branch* br1, Branch* br2);
-int* getTreeLeavesPos(Tree* tree);
-unsigned* branchToLeavesArr(Branch* br, unsigned leavesNum);
-Tree* makeMAST(Branch*** TAB, Tree* tree1, unsigned nodesNum2, unsigned* set1);
+Tree* oneLeafTreeCreate(char* name);
+int* countVariants(Tree*** TAB, int a, int w, int b, int c, int x, int y);
+Tree* merge2w3(Tree* tree1, Tree* tree2);
+Tree* merge3w3(Tree* tree1, Tree* tree2);
+Tree* mergeTrees(Tree* tree1, Tree* tree2);
 void MAST(Tree* tree1, Tree* tree2);
 #endif
