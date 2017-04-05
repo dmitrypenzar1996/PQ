@@ -243,11 +243,15 @@ Tree* treeFromNewick(char* newick)
     tree = treeCreate();
     stack = nodeStackCreate(strlen(newick));
 
-    if (newick[0] != '(' || newick[strlen(newick) - 1] != ';')
+   if (newick[0] != '(' || strchr(newick, ';') == NULL)
     {
         fprintf(stderr, "Error, wrong newick format, Tree:treeFromNewick\n");
         exit(1);
     }
+    else 
+    {
+        *(strchr(newick, ';') + 1) = '\0';
+}
 
 
     leaves = (Node**)calloc(sizeof(Node*), strlen(newick));
