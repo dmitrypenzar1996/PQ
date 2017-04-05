@@ -30,9 +30,13 @@ char* branchToString(Branch* br);
 char branchContradict(Branch* br1, Branch* br2);
 char branchIsSubset(Branch* br1, Branch* br2);
 Branch* branchAnd(Branch* br1, Branch* br2);
+Branch* branchOR(Branch* br1, Branch* br2);
 Branch* branchReverse(Branch* br);
 Branch* branchCopy(Branch* br);
 char branchIsZero(Branch* br);
+
+////##!!!!!
+unsigned countZeroRightNum_(INT p);
 
 typedef struct 
 {

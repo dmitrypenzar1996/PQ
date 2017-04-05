@@ -1,6 +1,6 @@
 #ifndef __ADD__H
 #define __ADD__H
-
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,9 +10,11 @@
 #define true 1
 #define false 0
 
-//typedef uint_fast64_t INT; add #include <stdint.h> if uncomment this
+typedef uint_fast64_t INT; //add  if uncomment this
 
 typedef unsigned long INT; /* enough for protein alignments up to 3000 sequences */
+
+//typedef size_t INT;
 
 int findSymbolPos(char* string, char symbol);
 

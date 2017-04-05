@@ -1,4 +1,5 @@
 #include "umast.h"
+#include <time.h>
 
 //Tree, growTree, add, consensus, countScore, countScoreHash, HashAlignment, RMQ, Record, TreeWS, RecordList, PWM, CutTree
 
@@ -59,7 +60,7 @@ BranchArray* treeRootedToBranchArray(Tree* tree, int* permutation){
         {
             for(i = 0; i < curNode->neiNum; ++i)
             {
-                for(j = 0; j < tree->leavesNum / 64 + 1; ++j)
+                for(j = 0; j < branchGetIntSize(ba->array[curNode->pos]); ++j)
                 {
                     ba->array[curNode->pos]->branch[j] |= \
                             ba->array[curNode->neighbours[i]->pos]->branch[j];
@@ -299,7 +300,7 @@ int branchGetLeavesPosNum(Branch* br)
         while(j < intSize)
         {
             k = countZeroRightNum((br->branch[i]) >> j);
-            if (k != 32)
+            if (k != intSize)
             {
                 curSize++;
             }
@@ -337,24 +338,6 @@ int* countVariants(Branch*** TAB, int a, int w, int b, int c, int x, int y)
     return result;
 }
 
-Branch* branchOR(Branch* br1, Branch* br2)
-{
-    int i = 0;
-    Branch* orBranch = NULL;
-    if (br1->size != br2->size)
-    {
-        raiseError("Branches are not of the same size", __FILE__, __FUNCTION__,
-                __LINE__);
-    }
-    orBranch = branchCreate(br1->size);
-    for(i = 0; i < branchGetIntSize(br1); ++i)
-    {
-        orBranch->branch[i] = br1->branch[i] | br2->branch[i];
-    }
-    return orBranch;
-}
-
-
 
 int* getTreeLeavesPos(Tree* tree){
 	int* leavesPosArr;
@@ -366,23 +349,27 @@ int* getTreeLeavesPos(Tree* tree){
 	for (i = 0; i < tree->leavesNum; i++){
 		leavesPosArr[tree->leaves[i]->pos] = i;
 	}
-	for (i = 0;  i < tree->nodesNum; i++){
-		}
+	/*for (i = 0;  i < tree->nodesNum; i++){
+		}*/
 	return leavesPosArr;
 }
 
 unsigned* branchToLeavesArr(Branch* br, unsigned leavesNum){
-	int i, j;
-	int curInt;
+    int i, j;
+    INT curInt;
     int curPos = 0;
-    int* leavesPosArr;
+    unsigned* leavesPosArr;
+    int curSize;
     leavesPosArr = (unsigned*)calloc(sizeof(unsigned), leavesNum);
     for (i = 0; i < leavesNum; i++){
     	leavesPosArr[i] = 0; //no leaf
     }
+
     for (i = 0; i < branchGetIntSize(br); ++i){
     	curInt = br->branch[i];
-    	for (j = 0; j < intSize; ++j){
+        curSize = leavesNum - (i * intSize);
+        curSize = curSize > intSize ? intSize : curSize;
+    	for (j = 0; j < curSize; ++j){
     		if ((curInt & 1) == 1){
     			leavesPosArr[curPos] = 1;
     		}
@@ -454,13 +441,11 @@ Tree* makeMAST(Branch* br, Tree* tree1){
 	unsigned* leavesPosArr;
 	char** leavesToSave;
 	Tree* result;
-	//FILE* logfile;
-	//logfile = fopen("logfile.log", "w");
+	FILE* logfile;
+	logfile = fopen("umast.log", "a+");
 	
 
 	treeWash(tree1);
-	
-	//branchPrint(br);
 	result = treeCreate();
 	leavesPosArr = branchToLeavesArr(br, tree1->leavesNum); //now we have list for needed and unneeded leaves
 	for (i = 0; i < tree1->leavesNum; i++){
@@ -470,16 +455,16 @@ Tree* makeMAST(Branch* br, Tree* tree1){
 	}
 
 	if (leavesToSaveAmount == tree1->leavesNum){
-		printf("%s\n", "pruned trees match completely");
+		fprintf(logfile, "%s\n", "pruned trees match completely");
 		result = treeCopy(tree1, 0);
-		printf("%s\n", treeToString(result));
-		printf("%d\n", result->leavesNum);
+		fprintf(logfile, "%s\n", treeToString(result));
+		//printf("%d\n", result->leavesNum);
 		return result;
 	}
 	else if (leavesToSaveAmount == 0){
-		printf("%s\n", "trees don't match");
-		printf("%s\n", treeToString(result));
-		printf("%d\n", leavesToSaveAmount);
+		fprintf(logfile, "%s\n", "trees don't match");
+		//printf("%s\n", treeToString(result));
+		//printf("%d\n", leavesToSaveAmount);
 		return result;
 	}
 	else {//some leaves are to be deleted but not all
@@ -495,16 +480,14 @@ Tree* makeMAST(Branch* br, Tree* tree1){
 		if (count > (leavesToSaveAmount)){
 			perror("makeMast broken\n");
 		}
-		//printf("%d%s\n", tree1->leavesNum - count, " leaves are to be deleted");
+		fprintf(logfile, "%d%s\n", tree1->leavesNum - count, " leaves are to be deleted");
 
 		result = treePrune(tree1, leavesToSave, (size_t) leavesToSaveAmount, 0);
 
-		//printf("%s\n", "leaves successfully deleted");
-		printf("%s\n", treeToString(result));
-		printf("%d\n", result->leavesNum);
-		
-		//fprintf(logfile, "%s\n", treeToString(result));
-		//fclose(logfile);
+		fprintf(logfile, "%s\n", "Maximum agreement subtree found:");
+		fprintf(logfile, "%s\n", treeToString(result));
+		fprintf(logfile, "%d\n", result->leavesNum);
+		fclose(logfile);
 		return result;
 	}
 }
@@ -526,7 +509,7 @@ Branch* MAST(Tree* tree1, Tree* tree2, unsigned* set1, unsigned* set2, unsigned*
     Branch*** TAB;
     Tree* result;
 
-    
+
     permutation = calculateLeavesPermutation(tree2, tree1);
     branchArr1 = treeRootedToBranchArray(tree1, getRange(0, tree1->leavesNum));
     branchArr2 = treeRootedToBranchArray(tree2, permutation);
@@ -555,7 +538,7 @@ Branch* MAST(Tree* tree1, Tree* tree2, unsigned* set1, unsigned* set2, unsigned*
                     	intersection = branchCreate(tree1->leavesNum);
                     	p = 1;
                     	p = p << (leavesPosArr1[set1[a]] & (intSize - 1));
-                    	intersection->branch[set1[a] / intSize] |= p;
+                    	intersection->branch[leavesPosArr1[set1[a]] / intSize] |= p;
                     	//branchPrint(intersection);
                         TAB[posT][posU] = intersection;
                     }
@@ -570,7 +553,7 @@ Branch* MAST(Tree* tree1, Tree* tree2, unsigned* set1, unsigned* set2, unsigned*
             	   if (tree1->nodes[set1[a]]->neiNum == 1){ //a is a leaf, w is a subtree
             		   p = 1;
             		   p = p << (leavesPosArr1[set1[a]] & (intSize - 1));
-            		   intersection->branch[set1[a] / intSize] |= p;
+            		   intersection->branch[leavesPosArr1[set1[a]] / intSize] |= p;
             		   intersection = branchAnd(intersection, branchArr2->array[set2[w]]);
             		   //branchPrint(intersection);
             		   TAB[posT][posU] = intersection;
@@ -578,7 +561,7 @@ Branch* MAST(Tree* tree1, Tree* tree2, unsigned* set1, unsigned* set2, unsigned*
             	   else{ //a is a subtree, w is a leaf
             		   p = 1;
             		   p = p << (permutation[leavesPosArr2[set2[w]]] & (intSize - 1));
-            		   intersection->branch[set2[w] / intSize] |= p;
+            		   intersection->branch[permutation[leavesPosArr2[set2[w]]] / intSize] |= p;
             		   intersection = branchAnd(intersection, branchArr1->array[set1[a]]);
             		   //branchPrint(intersection);
             		   TAB[posT][posU] = intersection;
@@ -673,7 +656,7 @@ Branch* MAST(Tree* tree1, Tree* tree2, unsigned* set1, unsigned* set2, unsigned*
         }
         posT++;
     }
-    free(variants);
+    //free(variants);
     //printf("%s\n", "Tree extraction started");
     k = 0; b = 0; c = 0;
     for (i = 0; i < tree1->nodesNum; i++){
@@ -707,7 +690,7 @@ void UMAST(Tree* tree1, Tree* tree2){
 	tree1 = prunedTrees[0];
 	tree2 = prunedTrees[1];
 	
-	printf("%s\n%s\n", treeToString(tree1), treeToString(tree2));
+	//printf("%s\n%s\n", treeToString(tree1), treeToString(tree2));
 	
 	rootNum = tree1->nodesNum - 1;
 	rootPositions = getAllRoots(tree1);
@@ -732,11 +715,10 @@ void UMAST(Tree* tree1, Tree* tree2){
     		j = i;
     	}
     }
-    printf("%s\n", "Maximum agreement subtree found:");
-    //branchPrint(umastSet[j]); 
 
+    //branchPrint(umastSet[j]);
     result = makeMAST(umastSet[j], tree1);
-    //printf("%s\n", treeToString(result));
+    printf("%d\n", result->leavesNum);
     
     return;
 }
@@ -744,6 +726,7 @@ void UMAST(Tree* tree1, Tree* tree2){
 int main(int argc, char** argv){
     Tree* tree1;
     Tree* tree2;
+    FILE* logfile;
 
     if (argc != 3)
     {
@@ -752,12 +735,22 @@ int main(int argc, char** argv){
         fprintf(stderr, "%s tree1 tree2\n", argv[0]);
         exit(1);
     }
-    puts("UMAST execution started");
+
+    logfile = fopen("umast.log", "w");
+    time_t t = time(NULL);
+    struct tm* aTm = localtime(&t);
+
+    fprintf(logfile, "UMAST execution started\n");
+    fprintf(logfile, "%04d/%02d/%02d %02d:%02d:%02d\n", aTm->tm_year+1900, aTm->tm_mon+1,\
+    		aTm->tm_mday, aTm->tm_hour, aTm->tm_min, aTm->tm_sec);
     tree1 = treeRead(argv[1]);
     tree2 = treeRead(argv[2]);
-    puts("Trees read successfully");
+    fprintf(logfile, "Trees read successfully\n");
+    fprintf(logfile, "%s\n", treeToString(tree1));
+    fprintf(logfile, "%s\n", treeToString(tree2));
+    fclose(logfile);
     UMAST(tree1, tree2);
-    puts("UMAST execution finished");
+    //fprintf(logfile, "UMAST execution finished");
     return 0;
 }
 

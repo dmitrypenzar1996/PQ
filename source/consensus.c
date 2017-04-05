@@ -1,14 +1,35 @@
 #include "consensus.h"
 
+Branch* branchOR(Branch* br1, Branch* br2)
+{
+    int i = 0;
+    Branch* orBranch = NULL;
+    if (br1->size != br2->size)
+    {
+        raiseError("Branches are not of the same size", __FILE__, __FUNCTION__,
+                __LINE__);
+    }
+    orBranch = branchCreate(br1->size);
+    for(i = 0; i < branchGetIntSize(br1); ++i)
+    {
+        orBranch->branch[i] = br1->branch[i] | br2->branch[i];
+    }
+    return orBranch;
+}
+
 size_t branchGetIntSize(Branch* br)
 {
+    if (br->size % intSize == 0)
+    {
+        return br->size / intSize;
+    }
+
     return br->size / intSize + 1;
 }
 
 Branch* branchCreate(unsigned size)
 {
     Branch* branch;
-
     branch = (Branch*)malloc(sizeof(Branch)); 
     branch->size = size;
     branch->branch = (INT*)calloc(sizeof(INT), branchGetIntSize(branch));
@@ -21,7 +42,7 @@ void branchDelete(Branch* branch)
     free(branch);
 }
 
-unsigned countZeroRightNum(INT p)
+unsigned countZeroRightNum_(INT p)
 {
 
     unsigned int v = p;  // find the number of trailing zeros in v
@@ -32,10 +53,33 @@ unsigned countZeroRightNum(INT p)
         7, 17, 0, 25, 22, 31, 15, 29, 10, 12, 6, 0, 21, 14, 9, 5,
           20, 8, 19, 18
     };
-
     r = Mod37BitPosition[(- ((int)v) & ((int)v) ) % 37];
     return r;
 }
+
+
+unsigned countZeroRightNum(INT p)
+{
+    if (p == 0)
+    {
+        return 64;
+    }
+    uint64_t y = p;
+    //find number of trailing zeros
+    int r;            // result goes here
+    static const char MultiplyDeBruijnBitPosition[64] = 
+    {
+            0, 1, 48, 2, 57, 49, 28, 3, 61, 58, 50, 42, 38, 29, 17, 4,
+            62, 55, 59, 36, 53, 51, 43, 22, 45, 39, 33, 30, 24, 18, 12, 5,
+            63, 47, 56, 27, 60, 41, 37, 16, 54, 35, 52, 21, 44, 32, 23, 11,
+            46, 26, 40, 15, 34, 20, 31, 10, 25, 14, 19, 9, 13, 8, 7, 6
+    };
+    r = MultiplyDeBruijnBitPosition[((uint64_t)((y & -y) * 0x03F79D71B4CB0A89U)) >> 58];
+    //printf("%lu %llu %d\n", p, y, r);
+    return r;
+}
+
+
 
 size_t* branchGetLeavesPos(Branch* br, size_t* leavesNum, size_t maxNum)
 {
@@ -52,14 +96,14 @@ size_t* branchGetLeavesPos(Branch* br, size_t* leavesNum, size_t maxNum)
         while(j < intSize)
         {
             k = countZeroRightNum((br->branch[i]) >> j);              
-            if (k < 32)
+            if (k < intSize)
             {
                 positions[curSize++] = k + j +  i * intSize;
             }
             j += k + 1;
             if (curSize >= maxNum)
             {
-		    break;
+                break;
             }
         }
 	if (curSize >= maxNum)
@@ -165,8 +209,8 @@ void branchPrint(Branch* br)
     for(j = 0; j < branchGetIntSize(br); ++j)
     {
         p = 1;
-        curSize = curSize > intSize ? intSize : curSize;
-        
+        //curSize = curSize > intSize ? intSize : curSize;
+        int curSize = intSize;
         for(k = 0; k < curSize; ++k)
         {
             printf("%lu", (br->branch[j] & p) >> k);
@@ -442,7 +486,7 @@ BranchArray* treeToBranch(Tree* tree, int* permutation)
         {
             for(i = 0; i < curNode->neiNum; ++i)
             {
-                for(j = 0; j < tree->leavesNum / 64 + 1; ++j)
+                for(j = 0; j < branchGetIntSize(ba->array[curNode->pos]); ++j)
                 {
                     ba->array[curNode->pos]->branch[j] |= \
                             ba->array[curNode->neighbours[i]->pos]->branch[j];
