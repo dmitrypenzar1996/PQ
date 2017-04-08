@@ -167,7 +167,7 @@ int main(int argc, char** argv)
     int known;
     int alignmentSet;
     int startOptionsNum;
-    INT**** hashScore;
+    SCORE**** hashScore;
     Tree* iniTree;
     TreeWithScore* result = NULL;
     TreeWithScore** trees;

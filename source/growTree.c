@@ -38,9 +38,9 @@ Tree* growThreeLeavesTree(char* leaf1, char* leaf2, char* leaf3)
 
 TreeWithScore* getBestChild(HashAlignment* alignment, TreeWithScore* treeWS,\
         char* newLeafName, int alpha, GapOpt gapOpt,\
-        PWM* pwmMatrix,  INT**** hashScore, int* permutation) 
+        PWM* pwmMatrix,  SCORE**** hashScore, int* permutation) 
 {
-    INT score;
+    SCORE score;
     int i, j;
     Tree* parent;
     TreeWithScore* bestChild;
@@ -87,7 +87,7 @@ TreeWithScore* getBestChild(HashAlignment* alignment, TreeWithScore* treeWS,\
 
 
 TreeWithScore* treeGrow(HashAlignment* alignment, int alpha, GapOpt gapOpt,\
-        PWM* pwmMatrix,  INT**** hashScore, char randLeaves)
+        PWM* pwmMatrix,  SCORE**** hashScore, char randLeaves)
 {
 
     TreeWithScore* result;
@@ -128,7 +128,7 @@ TreeWithScore* treeGrow(HashAlignment* alignment, int alpha, GapOpt gapOpt,\
 } /* treeGrow */
 
 TreeWithScore* oneTreeGrow(HashAlignment* alignment, int alpha, GapOpt gapOpt,\
-        PWM* pwmMatrix, INT**** hashScore, char randLeaves)
+        PWM* pwmMatrix, SCORE**** hashScore, char randLeaves)
 // PWM - for protein is PWM matrix, for nucleotide - null pointer
 // storeHash - create hash to store score function(faster)
 // or recalculate them each time (work much longer)
@@ -145,7 +145,7 @@ TreeWithScore* oneTreeGrow(HashAlignment* alignment, int alpha, GapOpt gapOpt,\
 
 TreeWithScore** multipleTreeGrow(HashAlignment* alignment,
                                  int alpha, GapOpt gapOpt,
-                                 PWM* pwmMatrix,  unsigned int treeNum, INT**** hashScore)
+                                 PWM* pwmMatrix,  unsigned int treeNum, SCORE**** hashScore)
 {
     TreeWithScore** treeArray;
     int i;

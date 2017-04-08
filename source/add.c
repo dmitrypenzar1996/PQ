@@ -1,9 +1,4 @@
 #include "add.h"
-#define MUL_COEFF 17
-#define TRUE 1
-#define FALSE 0
-
-
 int findSymbolPos(char* string, char symbol)
 {
     int pos = 0;

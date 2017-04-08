@@ -5,14 +5,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <stdint.h>
 #define TRUE 1
 #define FALSE 0
 #define true 1
 #define false 0
+#define MUL_COEFF 17
 
-//typedef uint_fast64_t INT; add #include <stdint.h> if uncomment this
 
-typedef unsigned long INT; /* enough for protein alignments up to 3000 sequences */
+
+//typedef uint_fast64_t SCORE; add #include <stdint.h> if uncomment this
+
+typedef unsigned long SCORE; /* enough for protein alignments up to 3000 sequences */
 
 int findSymbolPos(char* string, char symbol);
 

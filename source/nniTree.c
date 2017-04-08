@@ -2,7 +2,7 @@
 #define GRADUS 12000000
 
 TreeWithScore* simpleNNI(Tree* inTree, HashAlignment* alignment, PWM* pwmMatrix, \
-        int alpha, GapOpt gapOpt, INT**** hashScore)
+        int alpha, GapOpt gapOpt, SCORE**** hashScore)
 {   
     int i, j, variant;
     int isUpdate;
@@ -10,7 +10,7 @@ TreeWithScore* simpleNNI(Tree* inTree, HashAlignment* alignment, PWM* pwmMatrix,
     char** seqNames;
     int* permutation;
     Tree* resultTree;
-    INT score;
+    SCORE score;
     TreeWithScore* result;
     TreeWithScore* curBestTree;
     int counter;
@@ -77,7 +77,7 @@ TreeWithScore* simpleNNI(Tree* inTree, HashAlignment* alignment, PWM* pwmMatrix,
 } /* simpleNNI */
 
 TreeWithScore* gradientNNI(Tree* inTree, HashAlignment* alignment, PWM* pwmMatrix, \
-        int alpha, GapOpt gapOpt, INT**** hashScore)
+        int alpha, GapOpt gapOpt, SCORE**** hashScore)
 {   
     int i, j, variant;
     int isUpdate;
@@ -85,7 +85,7 @@ TreeWithScore* gradientNNI(Tree* inTree, HashAlignment* alignment, PWM* pwmMatri
     char** seqNames;
     int* permutation;
     Tree* resultTree;
-    INT score;
+    SCORE score;
     TreeWithScore* result;
     TreeWithScore* curBestTree;
 
@@ -256,7 +256,7 @@ char isNextPoint(int prevScore, int newScore, unsigned long revTemp)
 }  /* isNextPoint */
 
 Trajectory* trajectoryNNI(Tree* inTree, HashAlignment* alignment,
-                          PWM* pwmMatrix,  int alpha, GapOpt gapOpt, INT**** hashScore,
+                          PWM* pwmMatrix,  int alpha, GapOpt gapOpt, SCORE**** hashScore,
                           unsigned long trajectoryTime, unsigned int temperature, unsigned int mcStyle)
     // traectoryTime means how many iterations should algorithm do 
 {   
@@ -271,7 +271,7 @@ Trajectory* trajectoryNNI(Tree* inTree, HashAlignment* alignment,
     int* nodePermutation;
     Tree* curTree;
     Tree* newTree;
-    INT score;
+    SCORE score;
     TreeWithScore* curPoint;
     TreeWithScore* newTreeWS;
     Trajectory* resultTrajectory;

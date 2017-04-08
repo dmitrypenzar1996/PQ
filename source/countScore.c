@@ -2,7 +2,7 @@
 
 
 // +
-INT nucleotideScore(HashAlignment* alignment, Tree* intree,
+SCORE nucleotideScore(HashAlignment* alignment, Tree* intree,
         int alpha, GapOpt gapOpt,
         unsigned int pos11, unsigned int pos12,
         unsigned int pos21, unsigned int pos22)
@@ -10,7 +10,7 @@ INT nucleotideScore(HashAlignment* alignment, Tree* intree,
     int i;
     Record *rec11, *rec12, *rec21, *rec22;
     char *seq11, *seq12, *seq21, *seq22;
-    INT result;
+    SCORE result;
 
     rec11 = hashAlignmentGet(alignment, intree->leaves[pos11]->name);
     rec12 = hashAlignmentGet(alignment, intree->leaves[pos12]->name);
@@ -92,7 +92,7 @@ int getMaxPenalty(PWM* pwm, char letter11, char letter12, char letter21, char le
 } /* getMaxPenalty */
 
 //+
-INT proteinScore(HashAlignment* alignment, Tree* intree,\
+SCORE proteinScore(HashAlignment* alignment, Tree* intree,\
         PWM* pwm, int alpha, GapOpt gapOpt, \
         unsigned int pos11, unsigned int pos12,\
         unsigned int pos21, unsigned int pos22)
@@ -101,7 +101,7 @@ INT proteinScore(HashAlignment* alignment, Tree* intree,\
     int penalty, price1, price2;
     Record *rec11, *rec12, *rec21, *rec22;
     char *seq11, *seq12, *seq21, *seq22;
-    INT result = 0;
+    SCORE result = 0;
 
     rec11 = hashAlignmentGet(alignment, intree->leaves[pos11]->name);
     rec12 = hashAlignmentGet(alignment, intree->leaves[pos12]->name);
@@ -161,12 +161,12 @@ INT proteinScore(HashAlignment* alignment, Tree* intree,\
 } /* proteinScore */
 
 //+
-INT getScore(HashAlignment* alignment, Tree* tree,
+SCORE getScore(HashAlignment* alignment, Tree* tree,
         PWM* pwmMatrix, int alpha, GapOpt gapOpt,
         unsigned int pos11, unsigned int pos12,
         unsigned int pos21, unsigned int pos22)
 {
-    INT score;
+    SCORE score;
 
     if (pwmMatrix != NULL)
     {
@@ -183,10 +183,10 @@ INT getScore(HashAlignment* alignment, Tree* tree,
 } /* getScore */
 
 //+
-INT alignmentScore(HashAlignment* alignment, Tree* tree, PWM* pwm,\
+SCORE alignmentScore(HashAlignment* alignment, Tree* tree, PWM* pwm,\
     int alpha, GapOpt gapOpt)
 {
-    INT totalScore = 0;
+    SCORE totalScore = 0;
     int l1, l2, l3, l4;
     int pos11, pos12, pos21, pos22;
     int splitPos;
@@ -232,11 +232,11 @@ INT alignmentScore(HashAlignment* alignment, Tree* tree, PWM* pwm,\
 } /* alignmentScore */
 
 //+
-INT recountScore(HashAlignment* alignment, Tree* tree,\
+SCORE recountScore(HashAlignment* alignment, Tree* tree,\
         PWM* pwm, int alpha, GapOpt gapOpt) 
 {
     int lastLeafPos;
-    INT recount = 0;
+    SCORE recount = 0;
     int l1, l2, l3;
     int pos11, pos12, pos21, pos22;
     int splitPos;
@@ -281,10 +281,10 @@ INT recountScore(HashAlignment* alignment, Tree* tree,\
     return recount;
 } /* recountScore */
 
-INT alignmentScoreFiles(char* alignmentFileName, char* treeFileName,\
+SCORE alignmentScoreFiles(char* alignmentFileName, char* treeFileName,\
         char* pwmFileName, int alpha, GapOpt gapOpt)
 {
-    INT totalScore;
+    SCORE totalScore;
     PWM* pwm = NULL;
     HashAlignment* alignment;
     Tree* tree;

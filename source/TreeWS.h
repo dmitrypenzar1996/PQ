@@ -6,10 +6,10 @@
 typedef struct
 {
     Tree* tree;
-    INT score;
+    SCORE score;
 } TreeWithScore;
 
-TreeWithScore* treeWithScoreCreate(Tree* tree, INT score);
+TreeWithScore* treeWithScoreCreate(Tree* tree, SCORE score);
 
 void treeWithScoreDelete(TreeWithScore* treeWS);
 

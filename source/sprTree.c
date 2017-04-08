@@ -1,7 +1,7 @@
 #include "sprTree.h"
 
 TreeWithScore* simpleSPR(Tree* inTree, HashAlignment* alignment,
-                         PWM* pwmMatrix, int alpha, GapOpt gapOpt, INT**** hashScore)
+                         PWM* pwmMatrix, int alpha, GapOpt gapOpt, SCORE**** hashScore)
 {
     int i, j, k, h;
     char** treeNames;
@@ -10,7 +10,7 @@ TreeWithScore* simpleSPR(Tree* inTree, HashAlignment* alignment,
     int isUpdate;
     unsigned newBranchNodeID = 0;
     unsigned newBranchNeiPos = 0;
-    INT score;
+    SCORE score;
     TreeWithScore* curBestTree;
     TreeWithScore* result;
     int counter;    
@@ -87,7 +87,7 @@ TreeWithScore* simpleSPR(Tree* inTree, HashAlignment* alignment,
 }   /* simpleSPR */
 
 TreeWithScore* gradientSPR(Tree* inTree, HashAlignment* alignment,
-                           PWM* pwmMatrix, int alpha, GapOpt gapOpt, INT**** hashScore)
+                           PWM* pwmMatrix, int alpha, GapOpt gapOpt, SCORE**** hashScore)
 {
     int i, j, k, h;
     char** treeNames;
@@ -96,7 +96,7 @@ TreeWithScore* gradientSPR(Tree* inTree, HashAlignment* alignment,
     int isUpdate;
     unsigned newBranchNodeID = 0;
     unsigned newBranchNeiPos = 0;
-    INT score;
+    SCORE score;
     TreeWithScore* curBestTree;
     TreeWithScore* result;
 

@@ -1,20 +1,20 @@
 #include "countScoreHash.h"
 
-INT**** getHashScore(unsigned int leavesNum)
+SCORE**** getHashScore(unsigned int leavesNum)
 {
-    INT**** hashScore;
+    SCORE**** hashScore;
     int i, j, k, h;
 
-    hashScore =  (INT****)malloc(sizeof(INT***) * leavesNum);
+    hashScore =  (SCORE****)malloc(sizeof(SCORE***) * leavesNum);
     for (i = 0; i < leavesNum; ++i)
     {
-        hashScore[i] = (INT***)malloc(sizeof(INT**) * leavesNum);
+        hashScore[i] = (SCORE***)malloc(sizeof(SCORE**) * leavesNum);
         for (j = 0; j < leavesNum; ++j)
         {
-            hashScore[i][j] = (INT**)malloc(sizeof(INT*) * leavesNum);
+            hashScore[i][j] = (SCORE**)malloc(sizeof(SCORE*) * leavesNum);
             for (k = 0; k < leavesNum; ++k)
             {
-                hashScore[i][j][k] = (INT*)malloc(sizeof(INT) * leavesNum);
+                hashScore[i][j][k] = (SCORE*)malloc(sizeof(SCORE) * leavesNum);
                 for (h = 0; h < leavesNum; ++h)
                 {
                     hashScore[i][j][k][h] = -1;
@@ -26,7 +26,7 @@ INT**** getHashScore(unsigned int leavesNum)
 } /* getHashScore */
 
 
-void removeHashScore(INT**** hashScore, unsigned int leavesNum)
+void removeHashScore(SCORE**** hashScore, unsigned int leavesNum)
 {
     int i, j, k;
     for (i = 0; i < leavesNum; ++i)
@@ -45,13 +45,13 @@ void removeHashScore(INT**** hashScore, unsigned int leavesNum)
 } /* removeHashScore */
 
 
-INT getScoreHash(HashAlignment* alignment, Tree* intree,\
+SCORE getScoreHash(HashAlignment* alignment, Tree* intree,\
         PWM* pwm, int alpha, GapOpt gapOpt,\
-        INT**** hashScore, int* permutation,\
+        SCORE**** hashScore, int* permutation,\
         unsigned pos11, unsigned pos12,
         unsigned pos21, unsigned pos22)
 {
-    INT result;
+    SCORE result;
     
     if (hashScore != 0)
     {
@@ -88,12 +88,12 @@ INT getScoreHash(HashAlignment* alignment, Tree* intree,\
     return result;
 } /* getScorehash */
 
-INT recountScoreHash(HashAlignment* alignment, Tree* tree,\
+SCORE recountScoreHash(HashAlignment* alignment, Tree* tree,\
         PWM* pwm, int alpha, GapOpt gapOpt, \
-        INT**** hashScore, int* permutation)
+        SCORE**** hashScore, int* permutation)
 {
     int lastLeafPos;
-    INT recount = 0;
+    SCORE recount = 0;
     int l1, l2, l3;
     int pos11, pos12, pos21, pos22;
     int splitPos;
@@ -141,12 +141,12 @@ INT recountScoreHash(HashAlignment* alignment, Tree* tree,\
     return recount;
 }  /* recountScoreHash */
 
-INT countScoreHash(HashAlignment* alignment, Tree* tree,\
+SCORE countScoreHash(HashAlignment* alignment, Tree* tree,\
         PWM* pwm, int alpha, GapOpt gapOpt,\
-        INT**** hashScore, int* permutation)
+        SCORE**** hashScore, int* permutation)
 {
     int l1, l2, l3, l4;
-    INT totalScore = 0;
+    SCORE totalScore = 0;
     int pos11, pos12, pos21, pos22;
     int splitPos;
 
@@ -194,15 +194,15 @@ INT countScoreHash(HashAlignment* alignment, Tree* tree,\
 } /* countScoreHash */
 
 /*
-INT getNormalizeScore(Tree* tree, HashAlignment* alignment,\
+SCORE getNormalizeScore(Tree* tree, HashAlignment* alignment,\
         PWM* pwmMatrix, TWM* twmMatrix,\
-        int alpha, INT**** hashScore, int* permutation,\
+        int alpha, SCORE**** hashScore, int* permutation,\
         unsigned int pos11, unsigned int pos12,\
         unsigned int pos21, unsigned int pos22,
         unsigned (*normalize)(unsigned _dist12, unsigned _dist34,\
                               unsigned _dist12_34))
 {
-    INT score = getScore(tree, alignment, pwmMatrix, twmMatrix,\
+    SCORE score = getScore(tree, alignment, pwmMatrix, twmMatrix,\
             alpha, hashScore, permutation, pos11, pos12, pos21, pos22);
 
     unsigned lca12Pos = treeFindLCA(tree, pos11, pos12);
@@ -219,13 +219,13 @@ INT getNormalizeScore(Tree* tree, HashAlignment* alignment,\
 }
 */
 
-INT getMaxScore(Tree* tree, HashAlignment* alignment,\
+SCORE getMaxScore(Tree* tree, HashAlignment* alignment,\
         PWM* pwmMatrix, \
-        int alpha, GapOpt gapOpt, INT**** hashScore, int* permutation,
+        int alpha, GapOpt gapOpt, SCORE**** hashScore, int* permutation,
         unsigned int pos11, unsigned int pos12,\
         unsigned int pos21, unsigned int pos22)
 {
-    INT score1, score2, score3, max;
+    SCORE score1, score2, score3, max;
 
     score1 = getScoreHash(alignment, tree,\
             pwmMatrix, alpha, gapOpt,\
@@ -253,13 +253,13 @@ INT getMaxScore(Tree* tree, HashAlignment* alignment,\
     return max;
 } /* getMAxScore */
 
-INT recountMaxScore(Tree* tree, HashAlignment* alignment,\
+SCORE recountMaxScore(Tree* tree, HashAlignment* alignment,\
         PWM* pwmMatrix, \
-        int alpha, GapOpt gapOpt, INT**** hashScore, int* permutation)
+        int alpha, GapOpt gapOpt, SCORE**** hashScore, int* permutation)
 {
     
     int lastLeafPos;
-    INT recount = 0;
+    SCORE recount = 0;
     int l1, l2, l3;
 
     lastLeafPos = tree->leavesNum - 1;
@@ -278,18 +278,18 @@ INT recountMaxScore(Tree* tree, HashAlignment* alignment,\
     return recount;
 } /* recountScoreHash */
 
-INT* maxScoreAr(HashAlignment* alignment,\
+SCORE* maxScoreAr(HashAlignment* alignment,\
         PWM* pwmMatrix,\
-        int alpha, GapOpt gapOpt, INT**** hashScore, int* permutation)
+        int alpha, GapOpt gapOpt, SCORE**** hashScore, int* permutation)
 {
     char** names;
-    INT* maxScoreArray;
+    SCORE* maxScoreArray;
     Tree* dummy;
     int i;
     
     names = hashAlignmentGetSeqNames(alignment);    
 
-    maxScoreArray = (INT*)calloc(sizeof(INT), alignment->alignmentSize);
+    maxScoreArray = (SCORE*)calloc(sizeof(SCORE), alignment->alignmentSize);
     maxScoreArray[0] = 0; maxScoreArray[1] = 0; maxScoreArray[2] = 0;
     
     dummy = growThreeLeavesTree(names[permutation[0]], names[permutation[1]], names[permutation[2]]);
@@ -307,9 +307,9 @@ INT* maxScoreAr(HashAlignment* alignment,\
     return maxScoreArray;
 } /* maxScoreAr */
 
-INT countMaxScore(HashAlignment* alignment,\
+SCORE countMaxScore(HashAlignment* alignment,\
         PWM* pwmMatrix,\
-        int alpha, GapOpt gapOpt, INT**** hashScore, int* permutation)
+        int alpha, GapOpt gapOpt, SCORE**** hashScore, int* permutation)
 {
     char** names;
     Tree* dummy;

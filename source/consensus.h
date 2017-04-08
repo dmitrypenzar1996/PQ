@@ -8,20 +8,20 @@
 
 
 extern const char LOGUNS[4097];
-static const char intSize = sizeof(INT) * 8;
+static const char intSize = sizeof(uint64_t) * 8;
 
 
 typedef struct
 {
     unsigned size;
-    INT* branch;
+    uint64_t* branch;
 }Branch;
 
 
 size_t branchGetIntSize(Branch* br);
 Branch* branchCreate(unsigned size);
 void branchDelete(Branch* branch);
-unsigned countZeroRightNum(INT p);
+unsigned countZeroRightNum(uint64_t p);
 size_t* branchGetLeavesPos(Branch* br, size_t* leavesNum, size_t maxNum);
 int branchCompare(Branch* br1, Branch* br2);
 int vBranchCompare(const void* branch1, const void* branch2);
@@ -30,9 +30,11 @@ char* branchToString(Branch* br);
 char branchContradict(Branch* br1, Branch* br2);
 char branchIsSubset(Branch* br1, Branch* br2);
 Branch* branchAnd(Branch* br1, Branch* br2);
+Branch* branchOR(Branch* br1, Branch* br2);
 Branch* branchReverse(Branch* br);
 Branch* branchCopy(Branch* br);
 char branchIsZero(Branch* br);
+
 
 typedef struct 
 {

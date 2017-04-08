@@ -40,7 +40,7 @@ BranchInfo** treeToBranchInfo(Tree* tree, int* permutation)
     int k = 0;
     long dist1 = 0;
     long dist2 = 0;
-    INT p = 0;
+    uint64_t p = 0;
     size_t notTrivialBranchesNum = 0;
     BranchInfo** branchInfoArr = NULL;
     BranchInfo** branchInfoArrRmTrivial = NULL;

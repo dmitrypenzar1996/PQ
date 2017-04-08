@@ -9,40 +9,40 @@
 #include "growTree.h"
 #include <math.h>
 
-INT**** getHashScore(unsigned int leavesNum);
+SCORE**** getHashScore(unsigned int leavesNum);
 
-void removeHashScore(INT**** hashScore, unsigned int leavesNum);
+void removeHashScore(SCORE**** hashScore, unsigned int leavesNum);
 
 
-INT getScoreHash(HashAlignment* alignment, Tree* intree,\
+SCORE getScoreHash(HashAlignment* alignment, Tree* intree,\
         PWM* pwm, int alpha, GapOpt gapOpt,\
-        INT**** hashScore, int* permutation,\
+        SCORE**** hashScore, int* permutation,\
         unsigned pos11, unsigned pos12,
         unsigned pos21, unsigned pos22);
 
-INT recountScoreHash(HashAlignment* alignment, Tree* tree,\
+SCORE recountScoreHash(HashAlignment* alignment, Tree* tree,\
         PWM* pwm, int alpha, GapOpt gapOpt,\
-        INT**** hashScore, int* permutation);
+        SCORE**** hashScore, int* permutation);
 
-INT countScoreHash(HashAlignment* alignment, Tree* tree,\
+SCORE countScoreHash(HashAlignment* alignment, Tree* tree,\
         PWM* pwm, int alpha, GapOpt gapOpt,\
-        INT**** hashScore, int* permutation);
+        SCORE**** hashScore, int* permutation);
 
-INT getMaxScore(Tree* tree, HashAlignment* alignment,\
+SCORE getMaxScore(Tree* tree, HashAlignment* alignment,\
         PWM* pwmMatrix, \
-        int alpha, GapOpt gapOpt, INT**** hashScore, int* permutation,
+        int alpha, GapOpt gapOpt, SCORE**** hashScore, int* permutation,
         unsigned int pos11, unsigned int pos12,\
         unsigned int pos21, unsigned int pos22);
 
-INT recountMaxScore(Tree* tree, HashAlignment* alignment,\
+SCORE recountMaxScore(Tree* tree, HashAlignment* alignment,\
         PWM* pwmMatrix, \
-        int alpha, GapOpt gapOpt, INT**** hashScore, int* permutation);
+        int alpha, GapOpt gapOpt, SCORE**** hashScore, int* permutation);
 
-INT* maxScoreAr(HashAlignment* alignment,\
+SCORE* maxScoreAr(HashAlignment* alignment,\
         PWM* pwmMatrix, \
-        int alpha, GapOpt gapOpt, INT**** hashScore, int* permutation);
+        int alpha, GapOpt gapOpt, SCORE**** hashScore, int* permutation);
 
-INT countMaxScore(HashAlignment* alignment,\
+SCORE countMaxScore(HashAlignment* alignment,\
         PWM* pwmMatrix, \
-        int alpha, GapOpt gapOpt, INT**** hashScore, int* permutation);
+        int alpha, GapOpt gapOpt, SCORE**** hashScore, int* permutation);
 #endif
