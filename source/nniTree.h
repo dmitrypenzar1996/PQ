@@ -33,12 +33,12 @@ typedef struct
 Tree* treeNNI(Tree* intree, unsigned int branchindex, unsigned int which); 
 
 TreeWithScore* simpleNNI(Tree* inTree, HashAlignment* alignment, 
-    PWM* pwmMatrix, int alpha, GapOpt gapOpt, SCORE**** hashScore);
+    PWM* pwmMatrix, int alpha, GapOpt gapOpt, INT**** hashScore);
 
 TreeWithScore* gradientNNI(Tree* inTree, HashAlignment* alignment, 
-    PWM* pwmMatrix, int alpha, GapOpt gapOpt, SCORE**** hashScore);
+    PWM* pwmMatrix, int alpha, GapOpt gapOpt, INT**** hashScore);
 
 Trajectory* trajectoryNNI(Tree* inTree, HashAlignment* alignment,
-    PWM* pwmMatrix, int alpha, GapOpt gapOpt, SCORE**** hashScore,
+    PWM* pwmMatrix, int alpha, GapOpt gapOpt, INT**** hashScore,
     unsigned long int trajectoryTime, unsigned int temperature, unsigned int mcStyle);
 #endif

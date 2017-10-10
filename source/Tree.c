@@ -145,7 +145,6 @@ Tree* treeCreate()
     tree->leavesNum = 0;
     tree->nodesNum = 0;
     tree->lcaFinder = NULL;
-    tree->rootId = -1;
     return tree;
 } /* treeCreate */
 
@@ -243,15 +242,11 @@ Tree* treeFromNewick(char* newick)
     tree = treeCreate();
     stack = nodeStackCreate(strlen(newick));
 
-    if (newick[0] != '(' || strchr(newick, ';') == NULL)
-    {
-        fprintf(stderr, "Error, wrong newick format, Tree:treeFromNewick\n");
-        exit(1);
-    }
-    else 
-    {
-        *(strchr(newick, ';') + 1) = '\0';
-    }
+    //if (newick[0] != '(' || newick[strlen(newick) - 1] != ';')
+    //{
+    //    fprintf(stderr, "Error, wrong newick format, Tree:treeFromNewick\n");
+    //    exit(1);
+    //}
 
 
     leaves = (Node**)calloc(sizeof(Node*), strlen(newick));
@@ -419,7 +414,6 @@ Tree* treeCopy(Tree* source, char copyLCAFinder)
     dest->nodesNum = source->nodesNum;
     dest->nodes = calloc(sizeof(Node*), source->nodesNum);
     dest->leaves = calloc(sizeof(Node*), source->leavesNum);
-    dest->rootId = source->rootId;
 
     for(i = 0; i < source->nodesNum; ++i)
     {
@@ -991,7 +985,7 @@ Tree* treeRead(char* inFileName)
     inFile = fopen(inFileName, "r");
     if (inFile == NULL)
     {
-        fprintf(stderr, "Wrong file name or no access to read file, Tree:treeRead\n");
+        fprintf(stderr, "Wrong file name or no access to read file : %s, Tree:treeRead\n", inFileName);
         exit(1);
     } 
     strSize = strTreeSize;
@@ -1761,10 +1755,12 @@ int main()
     unsigned neiPos = 0;
     unsigned revertNodeID = 0;
     unsigned revertNeiID = 0;
+
     //char* newick = "((rec, (rec1, rec2)), ((dim, aunt) ,(aim,(bimmm, uiuu))));";
     char* newick = "(rec, (aunt,(aim,(bimmm, uiuu))));";
     
     Tree* tree = treeFromNewick(newick);
+
     printf("inPos\n");
     for(i = 0; i < tree->nodesNum; ++i)
     {
@@ -1784,6 +1780,7 @@ int main()
     }
     printf("\n");
     printf("Sparse Table\n");
+
     int length = tree->lcaFinder->sparceTable->length;
     for(i = 0; i < tree->lcaFinder->sparceTable->height; ++i)
     {
@@ -1795,6 +1792,8 @@ int main()
         length -= (1 << i);
     }
     
+
+
     printf("LCA is %u\n", treeFindLCADeep(tree, 2, 4));
     printf("Split is %u\n", treeWhichSplit(tree, 2, 4, 1, 3));
     printf("%u\n", tree->leavesNum);
@@ -1808,6 +1807,7 @@ int main()
     newickNew = treeToString(newTree);
     printf("%s\n", newickNew);
     free(newickNew);
+
     Tree* newTreeAdd = treeAddLeaf(tree, 1, 1, "urrr", 1, 0);
     Tree* newTreeRem = treeRemoveLeaf(tree, 3, 0, 0);
     newTreeRem = treeRemoveLeaf(newTreeRem, 0, 0, 0);
@@ -1823,6 +1823,7 @@ int main()
     newickNew = treeToString(newTreeRem);
     printf("%s\n", newickNew);
     free(newickNew);
+
     newickNew = treeToString(newTree);
     printf("%s\n", newickNew);
     free(newickNew);
@@ -1836,10 +1837,12 @@ int main()
     newickNew = treeToString(new2Tree);
     printf("%s\n", newickNew);
     free(newickNew);
+
     unsigned newBranch1NodeID = 0;
     unsigned newBranch1NeiPos = 0;
     unsigned newBracnh2NodeID = 0;
     unsigned newBracnh2NeiPos = 0;
+
     new2Tree = treeTBRMove(newTree, 1, 2, 0, 0, 5, 0,\
             &newBranch1NodeID, &newBranch1NeiPos,\
             &newBracnh2NodeID, &newBracnh2NeiPos,
@@ -1847,6 +1850,7 @@ int main()
     newickNew = treeToString(new2Tree);
     printf("TBR %s\n", newickNew);
     free(newickNew);
+
     printf("%d %d %d %d\n",\
         newBranch1NodeID, newBranch1NeiPos,
         newBracnh2NodeID, newBracnh2NeiPos);
@@ -1857,6 +1861,7 @@ int main()
     newickNew = treeToString(new2Tree);
     printf("TBR %s\n", newickNew);
     free(newickNew);
+
     treeDelete(tree);
     treeDelete(newTree);
     return 0;

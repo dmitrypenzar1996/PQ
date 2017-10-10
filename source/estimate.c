@@ -2,13 +2,13 @@
 
 // TreeWithScore: return inTree copy at first position and its nniNeighbours 
 TreeWithScore** getNNINeighbours(Tree* inTree, HashAlignment* alignment,
-        PWM* pwmMatrix, int alpha, GapOpt gapOpt, SCORE**** hashScore)
+        PWM* pwmMatrix, int alpha, GapOpt gapOpt, INT**** hashScore)
 {   
     int i, j, variant;
     char** treeNames;
     char** seqNames;
     int* permutation;
-    SCORE score;
+    INT score;
     TreeWithScore** neighbours;
     Tree* curTree;
     int curPos;
@@ -51,7 +51,7 @@ TreeWithScore** getNNINeighbours(Tree* inTree, HashAlignment* alignment,
 
 TreeWithScore* randomTreeGrow(HashAlignment* alignment, int alpha, GapOpt gapOpt,\
         PWM* pwmMatrix,\
-        SCORE**** hashScore)
+        INT**** hashScore)
 {
     static int init = 0;
     int i, j, k, h, m;
@@ -100,7 +100,7 @@ TreeWithScore* randomTreeGrow(HashAlignment* alignment, int alpha, GapOpt gapOpt
 
 TreeWithScore** growMultipleRandomTree(HashAlignment* alignment,
         int alpha, GapOpt gapOpt, PWM* pwmMatrix, unsigned treeNum,
-        SCORE**** hashScore)
+        INT**** hashScore)
 {
     TreeWithScore** treeWSAR; 
     unsigned i;
@@ -173,7 +173,7 @@ Sample* sampleFromTreeWSAr(TreeWithScore** treeSample, unsigned treeNum)
 
     sample = sampleCreate();
     sample->sampleSize = treeNum;
-    sample->sample = calloc(sizeof(SCORE), treeNum);
+    sample->sample = calloc(sizeof(INT), treeNum);
 
     for(i = 0; i < treeNum; ++i)
     {
@@ -184,7 +184,7 @@ Sample* sampleFromTreeWSAr(TreeWithScore** treeSample, unsigned treeNum)
     return sample;
 } /* sampleFromTreeWSAr */
 
-double sampleCalcZscore(Sample* sample, SCORE value)
+double sampleCalcZscore(Sample* sample, INT value)
 {
     return (value - sample->mean) / sqrt(sample->deviation);
 } /*  sampleCalcZscore */

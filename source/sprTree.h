@@ -7,8 +7,8 @@
 #include "TreeWS.h"
 
 TreeWithScore* simpleSPR(Tree* inTree, HashAlignment* alignment,\
-        PWM* pwmMatrix, int alpha, GapOpt gapOpt, SCORE**** hashScore);
+        PWM* pwmMatrix, int alpha, GapOpt gapOpt, INT**** hashScore);
 
 TreeWithScore* gradientSPR(Tree* inTree, HashAlignment* alignment,\
-        PWM* pwmMatrix, int alpha, GapOpt gapOpt, SCORE**** hashScore);
+        PWM* pwmMatrix, int alpha, GapOpt gapOpt, INT**** hashScore);
 

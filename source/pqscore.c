@@ -34,7 +34,7 @@ void printLongHelp(void)
 
 void main(int argc, char **argv)
 {
-    SCORE score;
+    INT score;
     char* alignmentFileName;
     char* treeFileName;
     char* pwmFileName = NULL;

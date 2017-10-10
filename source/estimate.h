@@ -13,21 +13,21 @@
 // return inTree copy at first position and its's nniNeighbours 
 TreeWithScore** getNNINeighbours(Tree* inTree, HashAlignment* alignment,\
         PWM* pwmMatrix,\
-        int alpha, GapOpt gapOpt, SCORE**** hashScore);
+        int alpha, GapOpt gapOpt, INT**** hashScore);
 
 TreeWithScore* randomTreeGrow(HashAlignment* alignment, int alpha, GapOpt gapOpt,\
         PWM* pwmMatrix,\
-        SCORE**** hashScore);
+        INT**** hashScore);
 
 TreeWithScore** growMultipleRandomTree(HashAlignment* alignment, int alpha,\
         GapOpt gapOpt,\
         PWM* pwmMatrix, unsigned treeNum,\
-        SCORE**** hashScore);
+        INT**** hashScore);
 
 typedef struct Sample
 {
     unsigned sampleSize;
-    SCORE* sample;
+    INT* sample;
     double deviation;
     double mean;
 }Sample;
@@ -36,7 +36,7 @@ void sampleDelete(Sample* sample);
 
 Sample* sampleCreate(void);
 
-double sampleCalcZscore(Sample* sample, SCORE value);
+double sampleCalcZscore(Sample* sample, INT value);
 
 Sample* sampleFromTreeWSAr(TreeWithScore** treeSample, unsigned treeNum);
 

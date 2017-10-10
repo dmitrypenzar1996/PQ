@@ -17,7 +17,7 @@
 
 void printLongHelp(void)
 {
-    printf("PQ version 2.3.2\n");
+    printf("PQ version 1.6\n");
     printf("General options:\n");
     printf(" -alignment <FileName> \n");
     printf("       File with input alignment in fasta format\n");
@@ -94,19 +94,19 @@ void printLongHelp(void)
     printf(" -distrFile <FileName>\n");
     printf("      File name to write scores of neighboring and/or random trees\n");
     printf("      Optional, no default value\n");
-    printf("Result statistics estimation:\n");
+    printf("Result statistics estimation:");
     printf(" -resultTreeNum <int>\n");
     printf("      Number of trees to generate\n");
-    printf("      Default: 1\n");
+    printf("      Default: 1");
     printf(" -sampleType <string>\n");
     printf("      how to generate sample trees\n");
-    printf("      \"simple\": just generate multiple trees\n");
-    printf("      \"bootstrap\": generate bootstrap trees(first tree  is result tree, others - bootstrap)\n");
-    printf("      \"jackknife\": the same, but generate jackknife trees\n");
-    printf("      Default: \"simple\"\n");
-    printf("      --removeFraction <double>\n");
-    printf("          fraction of positions to be removed during jackknife\n");
-    printf("          Default: \"0.5\"\n");
+    printf("      \"simple\" - just generate multiple trees\n");
+    printf("      \"bootstrap\" - generate bootstrap trees(first tree  is result tree, others - bootstrap)\n");
+    printf("      \"jackknife\" - the same, but generate jackknife trees\n");
+    printf("      Default: \"simple\"");
+    printf("      --removeFraction <double>");
+    printf("      fraction of positions to be removed during jackknife\n");
+    printf("      Default: \"0.5\"");
     return;
 } /* printLongHelp */
 
@@ -167,7 +167,7 @@ int main(int argc, char** argv)
     int known;
     int alignmentSet;
     int startOptionsNum;
-    SCORE**** hashScore;
+    INT**** hashScore;
     Tree* iniTree;
     TreeWithScore* result = NULL;
     TreeWithScore** trees;
@@ -533,9 +533,8 @@ int main(int argc, char** argv)
     }
     else
     {
-        fprintf(stderr, "Wrong value for sampleType: %s\n", sampleType);
-/*
-        raiseError("Wrong value of argument for sampleType", __FILE__, __FUNCTION__, __LINE__); */
+        raiseError("Wrong value of argument for sampleType", __FILE__,
+                __FUNCTION__, __LINE__);
     }
 
     resultTrees = malloc(sizeof(TreeWithScore*) * resultTreeNum);

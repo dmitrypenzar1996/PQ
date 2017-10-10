@@ -1,4 +1,9 @@
 #include "add.h"
+#define MUL_COEFF 17
+#define TRUE 1
+#define FALSE 0
+
+
 int findSymbolPos(char* string, char symbol)
 {
     int pos = 0;
@@ -86,11 +91,9 @@ char* readLine(FILE* inStream)
 char* readLine(FILE* inFile)
 {
     int lineMaxSize = 400;
-    char* npos;
-    char* line;
+    char* line = (char*)malloc(sizeof(char) * lineMaxSize);
+    
     char buffer[200];
-
-    line = (char*)malloc(sizeof(char) * lineMaxSize);
     if (fgets(buffer, 200, inFile))
     {
         memcpy(line, buffer, strlen(buffer) + 1);
@@ -110,7 +113,7 @@ char* readLine(FILE* inFile)
         memcpy(line + strlen(line), buffer, strlen(buffer) + 1);
     }
 
-    npos = strchr(line, '\n');
+    char* npos = strchr(line, '\n');
     if (npos != 0)
     {
         *npos = '\0'; // delete \n from line

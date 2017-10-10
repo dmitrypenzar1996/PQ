@@ -13,28 +13,28 @@ typedef enum GapOpt {PASS_NOT, PASS_PAIR, PASS_ANY} GapOpt;
 //PASS_PAIR - pass any tetrade with two gaps
 //PASS_ANY - pass any tetrade with gap
 
-SCORE nucleotideScore(HashAlignment* alignment, Tree* intree,\
+INT nucleotideScore(HashAlignment* alignment, Tree* intree,\
         int alpha, GapOpt gapOpt,\
         unsigned int pos11, unsigned int pos12,\
         unsigned int pos21, unsigned int pos22);
 
 int getMaxPenalty(PWM* pwm, char letter11, char letter12, char letter21, char letter22);
 
-SCORE proteinScore(HashAlignment* alignment, Tree* intree, PWM* pwm,\
+INT proteinScore(HashAlignment* alignment, Tree* intree, PWM* pwm,\
         int alpha, GapOpt gapOpt,\
         unsigned int pos11, unsigned int pos12,\
         unsigned int pos21, unsigned int pos22);
 
-SCORE alignmentScoreFiles(char* alignmentFileName, char* treeFileName,\
+INT alignmentScoreFiles(char* alignmentFileName, char* treeFileName,\
         char* pwmFileName, int alpha, GapOpt gapOpt);
 
-SCORE recountScore(HashAlignment* alignment, Tree* tree,\
+INT recountScore(HashAlignment* alignment, Tree* tree,\
         PWM* pwm, int alpha, GapOpt gapOpt);
 
-SCORE alignmentScore(HashAlignment* alignment, Tree* tree, PWM* pwm,\
+INT alignmentScore(HashAlignment* alignment, Tree* tree, PWM* pwm,\
     int alpha, GapOpt gapOpt);
 
-SCORE getScore(HashAlignment* alignment, Tree* tree,\
+INT getScore(HashAlignment* alignment, Tree* tree,\
         PWM* pwmMatrix, int alpha, GapOpt gapOpt, \
         unsigned int pos11, unsigned int pos12,\
         unsigned int pos21, unsigned int pos22);

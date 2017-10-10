@@ -1,6 +1,6 @@
 #include "TreeWS.h"
 
-TreeWithScore* treeWithScoreCreate(Tree* tree, SCORE score)
+TreeWithScore* treeWithScoreCreate(Tree* tree, INT score)
 {
     TreeWithScore* treeWS;
     treeWS = (TreeWithScore*)malloc(sizeof(TreeWithScore));
