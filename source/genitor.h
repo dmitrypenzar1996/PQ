@@ -9,5 +9,5 @@
 TreeWithScore* crossover(TreeWithScore* tree1, TreeWithScore* tree2, HashAlignment* alignment,\
 		int alpha, GapOpt gapOpt, PWM* pwmMatrix, INT**** hashScore);
 TreeWithScore* genitor(TreeWithScore** trees, unsigned treeNum, HashAlignment* alignment,\
-					int alpha, GapOpt gapOpt, PWM* pwmMatrix, INT**** hashScore);
+					int alpha, GapOpt gapOpt, PWM* pwmMatrix, INT**** hashScore, unsigned iterNum, unsigned iterLim);
 #endif

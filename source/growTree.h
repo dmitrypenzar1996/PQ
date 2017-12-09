@@ -10,6 +10,10 @@
 
 Tree* growThreeLeavesTree(char* leaf1, char* leaf2, char* leaf3);
 
+TreeWithScore* getBestChild(HashAlignment* alignment, TreeWithScore* treeWS,\
+        char* newLeafName, int alpha, GapOpt gapOpt,\
+        PWM* pwmMatrix,  INT**** hashScore, int* permutation);
+
 TreeWithScore* treeGrow(HashAlignment* alignment, int alpha, GapOpt gapOpt,\
         PWM* pwmMatrix, INT**** hashScore, char randLeaves);
 

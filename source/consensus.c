@@ -19,17 +19,13 @@ Branch* branchOR(Branch* br1, Branch* br2)
 
 size_t branchGetIntSize(Branch* br)
 {
-    if (br->size % intSize == 0)
-    {
-        return br->size / intSize;
-    }
-
     return br->size / intSize + 1;
 }
 
 Branch* branchCreate(unsigned size)
 {
     Branch* branch;
+
     branch = (Branch*)malloc(sizeof(Branch)); 
     branch->size = size;
     branch->branch = (INT*)calloc(sizeof(INT), branchGetIntSize(branch));
@@ -53,10 +49,10 @@ unsigned countZeroRightNum_(INT p)
         7, 17, 0, 25, 22, 31, 15, 29, 10, 12, 6, 0, 21, 14, 9, 5,
           20, 8, 19, 18
     };
-    r = Mod37BitPosition[(- ((int)v) & ((int)v) ) % 37];
+
+    r = Mod37BitPosition[(-v & v) % 37];
     return r;
 }
-
 
 unsigned countZeroRightNum(INT p)
 {
@@ -79,8 +75,6 @@ unsigned countZeroRightNum(INT p)
     return r;
 }
 
-
-
 size_t* branchGetLeavesPos(Branch* br, size_t* leavesNum, size_t maxNum)
 {
     unsigned i = 0;
@@ -96,20 +90,18 @@ size_t* branchGetLeavesPos(Branch* br, size_t* leavesNum, size_t maxNum)
         while(j < intSize)
         {
             k = countZeroRightNum((br->branch[i]) >> j);              
-            if (k < intSize)
+            if (k != 32)
             {
                 positions[curSize++] = k + j +  i * intSize;
             }
             j += k + 1;
             if (curSize >= maxNum)
             {
-                break;
+                free(positions);
+                *leavesNum = 0;
+                return NULL;
             }
         }
-	if (curSize >= maxNum)
-	{
-		break;
-	}
     }
     positions = realloc(positions, sizeof(size_t) * curSize);
     *leavesNum = curSize;
@@ -163,11 +155,10 @@ void branchNormalize(Branch* br)
         {
             br->branch[i] = ~(br->branch[i]);
         }
-
         --i;
         if (br->size % intSize)
         {
-            p = 1 << (br->size);
+            p = (INT)1 << ((INT)(br->size) % (INT)(intSize) );
             br->branch[i] = br->branch[i] % p; 
         }
     }
@@ -209,8 +200,8 @@ void branchPrint(Branch* br)
     for(j = 0; j < branchGetIntSize(br); ++j)
     {
         p = 1;
-        //curSize = curSize > intSize ? intSize : curSize;
-        int curSize = intSize;
+        curSize = curSize > intSize ? intSize : curSize;
+        
         for(k = 0; k < curSize; ++k)
         {
             printf("%lu", (br->branch[j] & p) >> k);
@@ -486,7 +477,7 @@ BranchArray* treeToBranch(Tree* tree, int* permutation)
         {
             for(i = 0; i < curNode->neiNum; ++i)
             {
-                for(j = 0; j < branchGetIntSize(ba->array[curNode->pos]); ++j)
+                for(j = 0; j < tree->leavesNum / 64 + 1; ++j)
                 {
                     ba->array[curNode->pos]->branch[j] |= \
                             ba->array[curNode->neighbours[i]->pos]->branch[j];
@@ -496,6 +487,7 @@ BranchArray* treeToBranch(Tree* tree, int* permutation)
             curNode->color = BLACK;
         }
     }
+
 
     isTrivial = (char*)calloc(sizeof(char), branchNum);
     isTrivial[curNode->pos] = 1;
@@ -510,6 +502,7 @@ BranchArray* treeToBranch(Tree* tree, int* permutation)
         if (! isTrivial[i]) branchArrayAdd(result, ba->array[i]);
         else branchDelete(ba->array[i]);
     }
+
 
     for(i = 0; i < result->size; ++i)
     {
@@ -777,11 +770,11 @@ void parserTreeAdd(ParserTree* tree, BranchOcc* branchOcc,
         }
         else // isSubset == 1
         {
-            printf("is subset = 1\n");
-            fprintf(stderr,"Perhaps something've gone wrong. Please,\
-                    make sure you've give branches in reverse order,\
-                    if yes - inform me");
-            exit(1);
+            //printf("is subset = 1\n");
+            //fprintf(stderr,"Perhaps something've gone wrong. Please,\
+            //        make sure you've give branches in reverse order,\
+            //        if yes - inform me");
+            //exit(1);
             temp = parserNodeCreate(branchOcc);
             if (curNode == tree->root)
             {
@@ -1098,13 +1091,15 @@ Tree* makeConsensus(Tree** treeArray, size_t treeNum, double threshold,
     BranchCounter* consensus = NULL;
     BranchCounter* bc = NULL;
     free(permutation);
-
+    int j = 0;
     for(i = 1; i < treeNum; ++i)
     {
         treeNames = treeGetNames(treeArray[i]); 
         permutation = calculatePermutation(treeNames, initTreeNames,
                 treeArray[i]->leavesNum);
+        
         temp = treeToBranch(treeArray[i], permutation);
+        
         branchArrayExtend(ba, temp);
         free(permutation);
         branchArrayDelete(temp);

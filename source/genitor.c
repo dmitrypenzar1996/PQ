@@ -1,6 +1,6 @@
 #include "genitor.h"
-#define MAX_GA_ITER 100
-#define MAX_LEADER_ITER 101
+//#define MAX_GA_ITER 18
+//#define MAX_LEADER_ITER 10001
 
 TreeWithScore* crossover(TreeWithScore* tree1, TreeWithScore* tree2,\
 			HashAlignment* alignment, int alpha,\
@@ -13,7 +13,9 @@ TreeWithScore* crossover(TreeWithScore* tree1, TreeWithScore* tree2,\
 	char** seqNames;
 	char** treeNames;
 	char** leavesToGrow;
+
 	indexes = (int*)calloc(sizeof(int), tree1->tree->leavesNum);
+
 	for (i = 0; i < tree1->tree->leavesNum; i++)
 	{
 		indexes[i] = 0;
@@ -21,6 +23,7 @@ TreeWithScore* crossover(TreeWithScore* tree1, TreeWithScore* tree2,\
 
 	result = treeWithScoreCreate(UMAST(tree1->tree, tree2->tree), 0);
 	leavesToGrow = (char**)calloc(sizeof(char*), tree1->tree->leavesNum);
+
 	for (i = 0; i < tree1->tree->leavesNum; i++)
 	{
 		for (j = 0; j < result->tree->leavesNum; j++)
@@ -37,10 +40,16 @@ TreeWithScore* crossover(TreeWithScore* tree1, TreeWithScore* tree2,\
 	{
 		leavesToGrow[i] = result->tree->leaves[i]->name;
 	}
+
 	i = result->tree->leavesNum;
+
 	for(j = 0; j < tree1->tree->leavesNum; j++)
 	{
-		if (i > tree1->tree->leavesNum) { perror("Leaves copying broken, genitor:crossover\n"); }
+		if (i > tree1->tree->leavesNum) 
+		{
+			fprintf(stderr, "failed to copy leaves, genitor:crossover\n");
+			exit(1);
+		}
 		if (indexes[j] == 0) 
 		{
 			leavesToGrow[i] = tree1->tree->leaves[j]->name;
@@ -50,6 +59,7 @@ TreeWithScore* crossover(TreeWithScore* tree1, TreeWithScore* tree2,\
 
 	seqNames = hashAlignmentGetSeqNames(alignment);
 	permutation = calculatePermutation(leavesToGrow, seqNames, alignment->alignmentSize); //leavesNum == alignmensSise?
+
 	for (i = result->tree->leavesNum; i < tree1->tree->leavesNum; i++)
 	{
 		result = getBestChild(alignment, result, leavesToGrow[i], alpha, gapOpt,\
@@ -60,12 +70,16 @@ TreeWithScore* crossover(TreeWithScore* tree1, TreeWithScore* tree2,\
 	result->score = 0; //maybe not needed
 	result->score = countScoreHash(alignment, result->tree, pwmMatrix, alpha, gapOpt,\
 								hashScore, permutation);
-	free(indexes); free(permutation); free(seqNames); free(treeNames); free(leavesToGrow);
+	free(indexes); 
+	free(permutation); 
+	free(seqNames); 
+	free(treeNames); 
+	free(leavesToGrow);
 	return result;
 }
 
 TreeWithScore* genitor(TreeWithScore** trees, unsigned treeNum, HashAlignment* alignment,\
-					int alpha, GapOpt gapOpt, PWM* pwmMatrix, INT**** hashScore)
+					int alpha, GapOpt gapOpt, PWM* pwmMatrix, INT**** hashScore, unsigned iterNum, unsigned iterLim)
 {
 	INT leaderScore;
 	int* permutation;
@@ -87,11 +101,11 @@ TreeWithScore* genitor(TreeWithScore** trees, unsigned treeNum, HashAlignment* a
 	treeWithScoreSort(population, treeNum);
 	leaderScore = population[treeNum - 1]->score;
 	seqNames = hashAlignmentGetSeqNames(alignment);
-	srand(time(NULL)); //???
+	srand(time(NULL));
 	//printf("here?\n");
 	
 	printf("hiiii2!\n");
-	while (t < MAX_GA_ITER)
+	while (t < iterNum)
 	{
 		i = rand() % treeNum;
 		j = rand() % treeNum;
@@ -126,7 +140,7 @@ TreeWithScore* genitor(TreeWithScore** trees, unsigned treeNum, HashAlignment* a
 			leaderIter++;
 		}
 
-		if (leaderIter == MAX_LEADER_ITER) 
+		if (leaderIter == iterLim) 
 		{
 			printf("leader exceeds population count\n");
 			return population[treeNum - 1];

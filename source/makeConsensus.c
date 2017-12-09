@@ -20,6 +20,7 @@ int main(int argNum, char** args)
     {
         treeDelete(treeArr[i - 2]);
     }
+    printf("HI!!!\n");
     printf("%s\n", treeConsensusToString(consensusTree));
     treeConsensusWrite(consensusTree, args[1]);
     treeDelete(consensusTree);

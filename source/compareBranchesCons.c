@@ -162,8 +162,7 @@ int main(int argsNum, char** args)
     int k = 0;
     DIR* d = NULL;;
     size_t fileNum = 0;
-    struct dirent* dir = NULL;
-    Tree* fullEtalon = treeRead(args[1]);
+
     Tree* etalon = NULL;
     Tree* tree = NULL;
     int isAgree = 0;

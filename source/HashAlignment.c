@@ -305,3 +305,19 @@ HashAlignment* hashAlignmentSeqShuffle(HashAlignment* alignment)
 
     return shAlignment;
 }
+
+void hashAlignmentWrite(HashAlignment* alignment, char* out_file_name)
+{
+    int i = 0;
+    FILE* in_file = fopen(out_file_name, "w");
+    char** names = hashAlignmentGetSeqNames(alignment);
+    Record* curRecord = NULL;
+    for(i = 0; i < alignment->alignmentSize; ++i)
+    {
+        curRecord = hashAlignmentGet(alignment, names[i]);
+        fprintf(in_file, ">%s\n%s\n", curRecord->name, curRecord->sequence);
+    }
+    free(names);
+    fclose(in_file);
+    return;
+}

@@ -38,4 +38,6 @@ RecordList* hashAlignmentGetList(HashAlignment* hashAlignment, char* name); //re
 char** hashAlignmentGetSeqNames(HashAlignment* alignment);
 
 HashAlignment* hashAlignmentSeqShuffle(HashAlignment* alignment);
+
+void hashAlignmentWrite(HashAlignment* alignment, char* out_file_name);
 #endif

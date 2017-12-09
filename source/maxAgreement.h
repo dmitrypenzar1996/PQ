@@ -16,10 +16,10 @@ unsigned* treeRootAndTopSort(Tree* tree, unsigned nodeID, unsigned neighbourID, 
 int* calculateLeavesPermutation(Tree* tree1, Tree* tree2);
 int branchGetLeavesPosNum(Branch* br);
 int* countVariants(Branch*** TAB, int a, int w, int b, int c, int x, int y);
-Branch* branchOR(Branch* br1, Branch* br2);
 int* getTreeLeavesPos(Tree* tree);
 unsigned* branchToLeavesArr(Branch* br, unsigned leavesNum);
 int** getAllRoots(Tree* tree);
+int* getRandMaxBranch(Branch*** TAB, int rows, int cols);
 Tree* makeMAST(Branch* br, Tree* tree1);
 Branch* MAST(Tree* intree1, Tree* intree2, unsigned* set1, unsigned* set2, unsigned* setPermutation1, unsigned* setPermutation2);
 Tree* UMAST(Tree* tree1, Tree* tree2);
