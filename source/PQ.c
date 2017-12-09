@@ -10,6 +10,7 @@
 #include "estimate.h"
 #include "consensus.h"
 #include "bootstrap.h"
+#include "genitor.h"
 
 
 #define TRUE 1
@@ -17,7 +18,7 @@
 
 void printLongHelp(void)
 {
-    printf("PQ version 2.3.2\n");
+    printf("PQ version 1.6\n");
     printf("General options:\n");
     printf(" -alignment <FileName> \n");
     printf("       File with input alignment in fasta format\n");
@@ -54,6 +55,13 @@ void printLongHelp(void)
     printf("      --chType <String>\n");
     printf("           \"bestScore\" : choose tree with best score\n");
     printf("           \"consensus\" : make consensus of trees\n");
+    printf("           \"genitor\" : search for optimal tree with genetic algorithm\n");
+    printf("                --iterNum <Positive integer>\n");
+    printf("                    for \"genitor\" option: number of iterations to perform\n");
+    printf("                    Default: 100\n");
+    printf("                --iterLim <Positive integer>\n");
+    printf("                    for \"genitor\" option: number of failures to stop after\n");
+    printf("                    Default: 25\n");
     printf("      Default: \"bestScore\"\n");
     printf("      Growing is not performed if an initial tree is given\n");
     printf(" -randLeaves <0 or 1>\n");
@@ -94,19 +102,19 @@ void printLongHelp(void)
     printf(" -distrFile <FileName>\n");
     printf("      File name to write scores of neighboring and/or random trees\n");
     printf("      Optional, no default value\n");
-    printf("Result statistics estimation:\n");
+    printf("Result statistics estimation:");
     printf(" -resultTreeNum <int>\n");
     printf("      Number of trees to generate\n");
-    printf("      Default: 1\n");
+    printf("      Default: 1");
     printf(" -sampleType <string>\n");
     printf("      how to generate sample trees\n");
-    printf("      \"simple\": just generate multiple trees\n");
-    printf("      \"bootstrap\": generate bootstrap trees(first tree  is result tree, others - bootstrap)\n");
-    printf("      \"jackknife\": the same, but generate jackknife trees\n");
+    printf("      \"simple\" - just generate multiple trees\n");
+    printf("      \"bootstrap\" - generate bootstrap trees(first tree  is result tree, others - bootstrap)\n");
+    printf("      \"jackknife\" - the same, but generate jackknife trees\n");
     printf("      Default: \"simple\"\n");
     printf("      --removeFraction <double>\n");
-    printf("          fraction of positions to be removed during jackknife\n");
-    printf("          Default: \"0.5\"\n");
+    printf("      fraction of positions to be removed during jackknife\n");
+    printf("      Default: \"0.5\"");
     return;
 } /* printLongHelp */
 
@@ -118,7 +126,8 @@ void printHelp(char *command)
     printf("\t[-iniTree <FileName>] [-pwm <FileName>]\n");
     printf("\t[-alpha <int>] [-gapOpt <0|1|2>]\n");
     printf("\t[-grType <one|multiple> [-randLeaves <0|1>]] [--treeNum <int>]\n");
-    printf("\t\t[--chType <bestScore|consensus>]\n");
+    printf("\t\t[--chType <bestScore|consensus|genitor>]\n");
+    printf("\t\t\t[--iterNum <int>] [--iterLim <int>]\n");
     printf("\t[-nniType <none|simple|direct|trajectory>\n");
     printf("\t\t[--trTime <int>] [--initTemp <int>] [--mcStyle <1|2|3>]]\n");
     printf("\t[-sprType <none|simple|direct>]\n");
@@ -145,6 +154,8 @@ int main(int argc, char** argv)
     int randLeaves = 1;
     char* grType;
     unsigned treeNum = 10;
+    unsigned iterNum = 100;
+    unsigned iterLim = 25; 
     char* nniType;
     unsigned long int trTime = 1000;
     unsigned int initTemp = 1000;
@@ -306,6 +317,24 @@ int main(int argc, char** argv)
                     chType = argv[startOptionsNum + 1];
                 }
             }
+            //----------------------
+            if (strcmp(param, "--iterNum") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    iterNum = atoi(argv[startOptionsNum + 1]);
+                }
+            }
+            if (strcmp(param, "--iterLim") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    iterLim = atoi(argv[startOptionsNum + 1]);
+                }
+            }
+            //----------------------
             if (strcmp(param, "-nniType") == 0)
             {
                 known = 1;
@@ -533,9 +562,8 @@ int main(int argc, char** argv)
     }
     else
     {
-        fprintf(stderr, "Wrong value for sampleType: %s\n", sampleType);
-/*
-        raiseError("Wrong value of argument for sampleType", __FILE__, __FUNCTION__, __LINE__); */
+        raiseError("Wrong value of argument for sampleType", __FILE__,
+                __FUNCTION__, __LINE__);
     }
 
     resultTrees = malloc(sizeof(TreeWithScore*) * resultTreeNum);
@@ -586,6 +614,15 @@ int main(int argc, char** argv)
                     treeWithScoreDelete(trees[i]);
                 }
                 free(treesTemp);
+            }
+            else if ((strcmp(chType, "genitor") == 0))
+            {
+                printf("starting genitor\n");
+                result = genitor(trees, treeNum, alignment, alpha, gapOpt, pwmMatrix, hashScore, iterNum, iterLim);
+                for(i = 0; i < treeNum; ++i)
+                {
+                    treeWithScoreDelete(trees[i]);
+                }
             }
             else
             {
