@@ -1,5 +1,22 @@
 #include "consensus.h"
 
+Branch* branchOR(Branch* br1, Branch* br2)
+{
+    int i = 0;
+    Branch* orBranch = NULL;
+    if (br1->size != br2->size)
+    {
+        raiseError("Branches are not of the same size", __FILE__, __FUNCTION__,
+                __LINE__);
+    }
+    orBranch = branchCreate(br1->size);
+    for(i = 0; i < branchGetIntSize(br1); ++i)
+    {
+        orBranch->branch[i] = br1->branch[i] | br2->branch[i];
+    }
+    return orBranch;
+}
+
 size_t branchGetIntSize(Branch* br)
 {
     return br->size / intSize + 1;
@@ -21,7 +38,7 @@ void branchDelete(Branch* branch)
     free(branch);
 }
 
-unsigned countZeroRightNum(INT p)
+unsigned countZeroRightNum_(INT p)
 {
 
     unsigned int v = p;  // find the number of trailing zeros in v
@@ -34,6 +51,27 @@ unsigned countZeroRightNum(INT p)
     };
 
     r = Mod37BitPosition[(-v & v) % 37];
+    return r;
+}
+
+unsigned countZeroRightNum(INT p)
+{
+    if (p == 0)
+    {
+        return 64;
+    }
+    uint64_t y = p;
+    //find number of trailing zeros
+    int r;            // result goes here
+    static const char MultiplyDeBruijnBitPosition[64] = 
+    {
+            0, 1, 48, 2, 57, 49, 28, 3, 61, 58, 50, 42, 38, 29, 17, 4,
+            62, 55, 59, 36, 53, 51, 43, 22, 45, 39, 33, 30, 24, 18, 12, 5,
+            63, 47, 56, 27, 60, 41, 37, 16, 54, 35, 52, 21, 44, 32, 23, 11,
+            46, 26, 40, 15, 34, 20, 31, 10, 25, 14, 19, 9, 13, 8, 7, 6
+    };
+    r = MultiplyDeBruijnBitPosition[((uint64_t)((y & -y) * 0x03F79D71B4CB0A89U)) >> 58];
+    //printf("%lu %llu %d\n", p, y, r);
     return r;
 }
 
@@ -1100,3 +1138,4 @@ Tree* makeConsensus(Tree** treeArray, size_t treeNum, double threshold,
     
     return consensusTree;
 }
+
