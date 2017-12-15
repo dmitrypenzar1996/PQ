@@ -25,7 +25,7 @@
 
 BranchArray* treeRootedToBranchArray(Tree* tree, int* permutation)
 {
-    INT p = 1;
+    uint64_t p = 1;
     int i = 0;
     int j = 0;
     unsigned branchNum = tree->nodesNum;

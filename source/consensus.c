@@ -1138,3 +1138,4 @@ Tree* makeConsensus(Tree** treeArray, size_t treeNum, double threshold,
     
     return consensusTree;
 }
+
