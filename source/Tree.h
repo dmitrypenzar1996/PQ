@@ -17,8 +17,6 @@
     If not, see <http://www.gnu.org/licenses/>.
 */
 
-
-
 #ifndef _TREE_H_
 #define _TREE_H_
 #include <stdio.h>
@@ -60,6 +58,7 @@ typedef struct Tree
     LCAFinder* lcaFinder;
     unsigned leavesNum;
     unsigned nodesNum;
+    ssize_t rootId; //-1 if unrooted, root->pos if rooted
 }Tree;
 
 typedef struct
@@ -109,7 +108,7 @@ Tree* treeSPRMove(Tree* tree, unsigned sourceNodeID, unsigned sourceNeiID,\
               char newTree, char calcLCAFinder);
 
 unsigned treeFindLCA(Tree* tree, unsigned node1ID, unsigned node2ID);
-unsigned treeGetDist(Tree* tree, unsigned leaf1ID, unsigned leaf2ID);
+unsigned treeGetDist(Tree* tree, unsigned node1ID, unsigned node2ID);
 char* treeConsensusToString(Tree* tree);
 void treeConsensusWrite(Tree* tree, char* outFileName);
 Tree* treePrune(Tree* source, char** leavesNames, size_t leavesNum,
