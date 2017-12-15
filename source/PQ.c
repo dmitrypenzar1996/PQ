@@ -1,1885 +1,880 @@
-/*  Copyright 2016, 2017 Andrew Sigorskih, Dmitry Penzar, Sergei Spirin 
-
-    This file is part of UMAST, taken from our another program PQ.
-
-    UMAST is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    UMAST is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with UMAST (a file named "COPYING.txt"). 
-    If not, see <http://www.gnu.org/licenses/>.
-*/
-
-
-
+#include <stdio.h>
+#include <assert.h>
+#include "growTree.h"
+#include "nniTree.h"
+#include "TreeWS.h"
+#include "HashAlignment.h"
+#include "PWM.h"
 #include "Tree.h"
+#include "sprTree.h"
+#include "estimate.h"
+#include "consensus.h"
+#include "bootstrap.h"
+#include "genitor.h"
 
 
-static const char DEFAULT_MAX_NODE_SIZE = 3;
-static const size_t default_strSize = 100;
+#define TRUE 1
+#define FALSE 0
 
-NodeStack* nodeStackCreate(unsigned maxSize)
+void printLongHelp(void)
 {
-    NodeStack* stack;
-    stack = (NodeStack*)malloc(sizeof(NodeStack));
-    stack->nodes = (Node**)calloc(sizeof(Node*), maxSize);
-    stack->curSize = 0;
-    stack->maxSize = maxSize;
-    return stack;
-} /* nodeStackCreate */
-
-void nodeStackDelete(NodeStack* stack)
-{
-    free(stack->nodes);
-    free(stack);
+    printf("PQ version 1.6\n");
+    printf("General options:\n");
+    printf(" -alignment <FileName> \n");
+    printf("       File with input alignment in fasta format\n");
+    printf("       Required, no default value\n");
+    printf(" -out <FileName>\n");
+    printf("       Output file\n");
+    printf("       Default: pq_out.tre\n");
+    printf(" -iniTree <FileName> \n");
+    printf("       File with initial tree in Newick format, optional\n");
+    printf("       If -iniTree is given, growing tree by stepwise addition is omitted\n");
+    printf("\n");
+    printf("Scoring options:\n");
+    printf(" -pwm <FileName>\n");
+    printf("      File with scoring matrix (e.g. BLOSUM62.txt) \n");
+    printf("      If not given, the identity matrix is used\n");
+    printf(" -alpha <Positive integer>\n");
+    printf("      Multiplication coefficient for pq-pairs supported twice\n");
+    printf("      Default: 1\n");
+    printf(" -gapOpt <0|1|2>\n");
+    printf("      Maximum number of gaps among four letters in a position-quartet pair\n");
+    printf("      If 0, pq-pairs with at least one gap are ignored\n");
+    printf("      If 1, pq-pairs with one gap are scored, with two gaps are ignored\n");
+    printf("      If 2, all gaps are scored as residues/nucleotides\n");
+    printf("      Default: 0\n");
+    printf("\n");
+    printf("Optimization options:\n");
+    printf(" -grType <String>\n");
+    printf("      \"one\": grow a single tree by stepwise addition of leaves,\n");
+    printf("      \"multiple\":  grow many trees\n");
+    printf("      Default: \"multiple\"\n");
+    printf("      --treeNum <Positive integer>\n");
+    printf("           for \"multiple\" option: number of trees to grow\n");
+    printf("           Default: 10\n");
+    printf("      --chType <String>\n");
+    printf("           \"bestScore\" : choose tree with best score\n");
+    printf("           \"consensus\" : make consensus of trees\n");
+    printf("           \"genitor\" : search for optimal tree with genetic algorithm\n");
+    printf("                --iterNum <Positive integer>\n");
+    printf("                    for \"genitor\" option: number of iterations to perform\n");
+    printf("                    Default: 100\n");
+    printf("                --iterLim <Positive integer>\n");
+    printf("                    for \"genitor\" option: number of failures to stop after\n");
+    printf("                    Default: 25\n");
+    printf("      Default: \"bestScore\"\n");
+    printf("      Growing is not performed if an initial tree is given\n");
+    printf(" -randLeaves <0 or 1>\n");
+    printf("      If 1, shuffle the input order of sequences\n");
+    printf("      Switching to 0 makes sense for grType = \"one\")\n");
+    printf("      Default: 1\n"); 
+    printf(" -nniType <String>\n");
+    printf("      \"none\": do not perform NNI search,\n");
+    printf("      \"direct\" or \"gradient\": perform gradient NNI hill climbing,\n");
+    printf("      \"simple\": perform simple NNI hill climbing,\n");
+    printf("      \"trajectory\": perform NNI Monte-Carlo search\n");
+    printf("      Default: \"direct\"\n"); 
+    printf("      --trTime <Positive integer>\n"); 
+    printf("           For \"trajectory\"option: number of iterations\n");
+    printf("           Default : 1000\n"); 
+    printf("      --initTemp <Positive integer>\n");
+    printf("           For \"trajectory\"option: initial temperature\n");
+    printf("           Default: 1000\n");
+    printf("      --mcStyle <1|2|3>\n");
+    printf("           For \"trajectory\"option: style of Monte-Carlo search\n");
+    printf("           Default: 1\n");
+    printf(" -sprType <String>\n");
+    printf("      \"none\": do not perform SPR search,\n");
+    printf("      \"direct\" or \"gradient\": perform gradient SPR hill climbing,\n");
+    printf("      \"simple\": perform simple SPR hill climbing,\n");
+    printf("      Default: \"none\"\n"); 
+    printf("\n");
+    printf("Result quality estimations:\n");
+    printf(" -neiZscore <0 or 1>\n");
+    printf("      If 1, calculate Z-score based on scores of neighboring trees\n");
+    printf("      Default: 0\n");
+    printf(" -randTreeZscore <0 or 1>\n");
+    printf("      If 1, calculate Z-score based on scores of random trees\n");
+    printf("      Default: 0\n");
+    printf("      --randTreeNum <Positive integer>\n");
+    printf("           For randTreeZscore: number of random trees\n");     
+    printf("           Default : 10\n");
+    printf(" -distrFile <FileName>\n");
+    printf("      File name to write scores of neighboring and/or random trees\n");
+    printf("      Optional, no default value\n");
+    printf("Result statistics estimation:");
+    printf(" -resultTreeNum <int>\n");
+    printf("      Number of trees to generate\n");
+    printf("      Default: 1");
+    printf(" -sampleType <string>\n");
+    printf("      how to generate sample trees\n");
+    printf("      \"simple\" - just generate multiple trees\n");
+    printf("      \"bootstrap\" - generate bootstrap trees(first tree  is result tree, others - bootstrap)\n");
+    printf("      \"jackknife\" - the same, but generate jackknife trees\n");
+    printf("      Default: \"simple\"\n");
+    printf("      --removeFraction <double>\n");
+    printf("      fraction of positions to be removed during jackknife\n");
+    printf("      Default: \"0.5\"");
     return;
-} /* nodeStackDelete */
+} /* printLongHelp */
 
-void nodeStackPush(NodeStack* stack, Node* node)
+void printHelp(char *command)
 {
-    if (stack->curSize >= stack->maxSize)
-    {
-        stack->maxSize = stack->maxSize * 3 / 2 + 1;
-        stack->nodes = realloc(stack->nodes, sizeof(Node*) * stack->maxSize);
-    }
-    stack->nodes[stack->curSize] = node; 
-    ++stack->curSize;
+    /* printf("Help message for PQ ver 1.5\n"); */
+    printf("Usage:\n");
+    printf("%s -alignment <FileName> -out <FileName>\n", command);
+    printf("\t[-iniTree <FileName>] [-pwm <FileName>]\n");
+    printf("\t[-alpha <int>] [-gapOpt <0|1|2>]\n");
+    printf("\t[-grType <one|multiple> [-randLeaves <0|1>]] [--treeNum <int>]\n");
+    printf("\t\t[--chType <bestScore|consensus|genitor>]\n");
+    printf("\t\t\t[--iterNum <int>] [--iterLim <int>]\n");
+    printf("\t[-nniType <none|simple|direct|trajectory>\n");
+    printf("\t\t[--trTime <int>] [--initTemp <int>] [--mcStyle <1|2|3>]]\n");
+    printf("\t[-sprType <none|simple|direct>]\n");
+    printf("\t[-neiZscore <0|1>] [-randTreeZscore <0|1>]\n");
+    printf("\t\t[-distrFile <FileName>]\n");
+    printf("\t[-resultTreeNum <int>] [-sampleType <simple|bootstrap|jackknife> ]\n");
+    printf("\t\t[--removeFraction <int>]\n");
+    printf("For description of parameters run %s -h\n", command);
+    puts("Press Enter to continue");
+    getchar();
     return;
-} /* nodeStackPush */
-
-Node* nodeStackPeek(NodeStack* stack)
-{
-    if (stack->curSize == 0)
-    {
-        fprintf(stderr, "Error, attempt to peek from empty stack, \
-                Tree:nodeStackPeek\n");
-        exit(1);
-    }
-    return stack->nodes[stack->curSize - 1];
-} /* nodeStackFees */
-
-void nodeStackPop(NodeStack* stack)
-{
-    if (stack->curSize == 0)
-    {
-        fprintf(stderr, "Error, attempt to pop from empty stack, \
-                Tree:nodeStackPop\n");
-        exit(1);
-    }
-    --stack->curSize;
-    return;
-} /* nodeStackingPop */
-
-Node* nodeCreate()
-{
-    Node* node;
-
-    node = (Node*)malloc(sizeof(Node));
-    node->name = 0;
-    node->neighbours = (Node**)calloc(sizeof(Node*), DEFAULT_MAX_NODE_SIZE);
-    node->dist = (double*)calloc(sizeof(double), DEFAULT_MAX_NODE_SIZE);
-    node->neiNum = 0;
-    node->maxNeiNum = DEFAULT_MAX_NODE_SIZE;
-    node->color = WHITE;
-    node->pos = -1;
-    return node;
-} /* nodeCreate */
-
-Node* leafCreate(char* name)
-{
-    Node* node; 
-    node = nodeCreate();
-    if (name == 0)
-    {
-        fprintf(stderr, "Error: Null name for leaf, Tree:leafCreate\n");
-        exit(1);
-    }
-    node->name = (char*)malloc(sizeof(char) * (strlen(name) + 1));
-    strcpy(node->name, name);
-    return node;
-} /* lleafCreate */
-
-void nodeDelete(Node* node)
-{
-    if (node == 0)
-    {
-        fprintf(stderr, "Error: Null node to delete, Tree:nodeDelete\n");
-        exit(1);
-    }
-    if (node->name != 0)
-    {
-        free(node->name);
-    }
-    free(node->neighbours);
-    free(node->dist);
-    free(node);
-    return;
-} /* nodeDelete */
-
-void nodeAddNeighbour(Node* node, Node* neighbour, double dist)
-{
-    if (neighbour == 0)
-    {
-        fprintf(stderr, "Error, Null node as neighbour, Tree:nodeAddNeighbour\n");
-        exit(1);
-    }
-    else if (node == 0)
-    {
-        fprintf(stderr, "Error, Null node as node, Tree:nodeAddNeighbour\n");
-        exit(1);
-    }
-
-    if ((node->neiNum == 1) && (node->name != 0))
-    {
-        fprintf(stderr, "Error, node has max number of possible neighbours\n");
-        exit(1);
-    }
-
-    if (node->neiNum == node->maxNeiNum)
-    {
-        node->maxNeiNum = node->maxNeiNum * 3 / 2 + 1;
-        node->neighbours = realloc(node->neighbours, sizeof(Node*) * 
-                node->maxNeiNum);
-        node->dist = realloc(node->dist, sizeof(Node*)  * 
-                node->maxNeiNum);
-    }
-
-    node->neighbours[node->neiNum] = neighbour;
-    node->dist[node->neiNum] = dist;
-    ++node->neiNum;
-    return;
-} /* nodeAddNeighbour */
-
-Tree* treeCreate()
-{
-    Tree* tree;
-    tree = (Tree*)malloc(sizeof(Tree));
-    tree->nodes = NULL; 
-    tree->leaves = NULL;
-    tree->leavesNum = 0;
-    tree->nodesNum = 0;
-    tree->lcaFinder = NULL;
-    tree->rootId = -1;
-    return tree;
-} /* treeCreate */
-
-void treeDelete(Tree* tree)
-{
-    if (tree->nodesNum != 0)
-    {
-        int i = 0;
-        for(i = 0; i < tree->nodesNum; ++i)
-        {
-            nodeDelete(tree->nodes[i]);
-        }
-    }
-    if (tree->nodes != 0)
-    {
-        free(tree->nodes);
-    }
-    if (tree->leaves != 0)
-    {
-        free(tree->leaves);
-    }
-    if (tree->lcaFinder != 0)
-    {
-        lcaFinderDelete(tree->lcaFinder);
-    }
-    free(tree);
-    return;
-} /* treeDelete */
-
-double readLength(char* string, unsigned* pos)
-{
-    int j;
-   
-    j = *pos;
-    while(j < strlen(string) && string[j] != ')' && string[j] != ',')
-    {
-        if (('0' <= string[j] && string[j] <= '9') || string[j] == '.' ||
-                string[j] == '-')
-        {
-            ++j;
-        }
-        else
-        {
-            printf("%s\n", string + j);
-            fprintf(stderr, "Error: wrong Newick format, Tree:readLength\n");
-            exit(1);
-        }
-    }
-
-    double length = atof(string + (*pos));
-    *pos = j;
-    return length;
-} /* readLength */
-
-char* readName(char* string, unsigned* pos)
-{
-    int j;
-    char* name;
-   
-    j = *pos;
-    while(j < strlen(string) && string[j] != ')' && string[j] != ',' && 
-            string[j] != ':')
-    {
-        if (string[j] == '(')
-        {
-            fprintf(stderr, "Error: wrong Newick format, Tree:readName\n");
-            exit(1);
-        }
-        ++j;
-    }
-    name = (char*)malloc(sizeof(char) * (j - *pos + 1));
-    memcpy(name, string + *pos, j - *pos);
-    name[j - *pos] = '\0';
-    *pos = j;
-    return name;
-} /* readName */
-
-
-Tree* treeFromNewick(char* newick)
-{
-    Tree* tree;
-    NodeStack* stack;
-    unsigned nodesNum;
-    unsigned leavesNum;
-    Node** leaves;
-    Node** nodes;
-    Node* node;
-    Node* nei;
-    Node* fuse;
-    unsigned int curPos;
-    char* name;
-    int i;
-    double dist;
-
-    tree = treeCreate();
-    stack = nodeStackCreate(strlen(newick));
-
-    if (newick[0] != '(' || strchr(newick, ';') == NULL)
-    {
-        fprintf(stderr, "Error, wrong newick format, Tree:treeFromNewick\n");
-        exit(1);
-    }
-    else 
-    {
-        *(strchr(newick, ';') + 1) = '\0';
-    }
-
-
-    leaves = (Node**)calloc(sizeof(Node*), strlen(newick));
-    nodes = (Node**)calloc(sizeof(Node*), strlen(newick));
-
-    node = nodeCreate();
-    nodeStackPush(stack, node);
-    nodesNum = 0;
-    nodes[nodesNum] = node;
-    node->pos = nodesNum;
-    ++nodesNum;
-    leavesNum = 0;
-/* here is not yet! */
-    curPos = 1;
-    while(newick[curPos] != ';')
-    {
-        if (newick[curPos] == '(')
-        {
-            node = nodeCreate();
-            nodeAddNeighbour(nodeStackPeek(stack), node, 0);
-            nodeAddNeighbour(node, nodeStackPeek(stack), 0);
-            nodes[nodesNum] = node;
-            node->pos = nodesNum;
-            ++nodesNum;
-            nodeStackPush(stack, node);
-            ++curPos;
-        }
-        else if (newick[curPos] == ')')
-        {
-            nodeStackPop(stack);
-            ++curPos;
-        }
-        else if (newick[curPos] == ':')
-        {
-            ++curPos;
-
-            node = nodeStackPeek(stack);
-            dist = readLength(newick, &curPos);
-            node->dist[node->neiNum - 1] = dist;
-            nei = node->neighbours[node->neiNum - 1];
-
-            for(i = 0; i < nei->neiNum; ++i)
-            {
-                if (node == nei->neighbours[i])
-                {
-                    nei->dist[i] = dist;
-                    break;
-                }
-            }
-        }
-        else if (newick[curPos] == ' ' || newick[curPos] == ',' || 
-                 newick[curPos] < 32)
-        {
-            ++curPos;
-        }
-        else
-        {
-            name = readName(newick, &curPos);
-            node = leafCreate(name);
-            free(name);
-            leaves[leavesNum] = node;
-            ++leavesNum;
-            nodes[nodesNum] = node;
-            node->pos = nodesNum;
-            ++nodesNum;
-            nodeAddNeighbour(nodeStackPeek(stack), node, 0);
-            nodeAddNeighbour(node, nodeStackPeek(stack), 0);
-        }
-    }
- 
-    nodeStackDelete(stack);
-
-
-    //if (nodes[0]->neiNum < 2)
-   // {
-  //      fprintf(stderr, "Error, tree must contain at least two leaves,\
-  //              Tree:treeFromNewick\n");
-  //      exit(1);
-  //  }
-  //
-
-    //if (nodesNum != (leavesNum * 2 - 2) && nodesNum != (leavesNum * 2 - 1))
-    //{
-   //     fprintf(stderr, "Error, wrong newick format, Tree:treeFromNewick\n");
-   //     exit(1);
-   // }
-
-
-    Node* nei1 = NULL;
-    Node* nei2 = NULL;
-    leaves = realloc(leaves, sizeof(Node*) * leavesNum);
-    if (nodes[0]->neiNum == 2) //tree was rooted
-    {
-        fuse = nodes[0];
-        nei1 = fuse->neighbours[0];
-        nei2 = fuse->neighbours[1];
-        dist = fuse->dist[0] ? fuse->dist[0] : fuse->dist[1]; 
-
-        for(i = 0; i < nei1->neiNum; ++i)
-        {
-            if (nei1->neighbours[i] == fuse)
-            {
-                nei1->neighbours[i] = nei2;
-                nei1->dist[i] = dist;
-                break;
-            }
-        }
-
-        for(i = 0; i < nei2->neiNum; ++i)
-        {
-            if (nei2->neighbours[i] == fuse)
-            {
-                nei2->neighbours[i] = nei1;
-                nei2->dist[i] = dist;
-                break;
-            }
-        }
-
-        --nodesNum;
-        memmove(nodes, nodes + 1, sizeof(Node*) * nodesNum);
-        nodeDelete(fuse);
-    }
-
-    for(i = 0; i < nodesNum; ++i)
-    {
-        nodes[i]->pos = i;
-    }
-
-    nodes = realloc(nodes, sizeof(Node*) * nodesNum);
-    tree->nodes = nodes;
-    tree->leaves = leaves;
-    tree->leavesNum = leavesNum;
-    tree->nodesNum = nodesNum;
-
-
-    treeLCAFinderCalculate(tree);
-
-    return tree; 
-} /*treeFromNewick */
-
-void treeWash(Tree* tree)
-{
-    int i = 0;
-    for(i = 0; i < (tree->nodesNum); ++i)
-    {
-        tree->nodes[i]->color = WHITE;
-    }
-    return;
-} /* treeWash */
-
-Tree* treeCopy(Tree* source, char copyLCAFinder)
-{
-    int i, j;
-    Node* curNode = NULL;
-    unsigned curLeafID = 0;
-    Tree* dest;
-
-    if (source == NULL)
-    {
-        fprintf(stderr, "Error, null Tree pointer, Tree:treeCopy\n");
-        exit(1);
-    }
-    dest = treeCreate();
-    dest->leavesNum = source->leavesNum;
-    dest->nodesNum = source->nodesNum;
-    dest->nodes = calloc(sizeof(Node*), source->nodesNum);
-    dest->leaves = calloc(sizeof(Node*), source->leavesNum);
-    dest->rootId = source->rootId;
-
-    for(i = 0; i < source->nodesNum; ++i)
-    {
-        curNode = source->nodes[i];
-        if (curNode->name == NULL) /* internal */
-        {
-            dest->nodes[i] = nodeCreate();
-            dest->nodes[i]->pos = i;
-        }
-        else /* leaf */
-        {
-            dest->nodes[i] = leafCreate(curNode->name);
-            dest->leaves[curLeafID] = dest->nodes[i];
-            dest->nodes[i]->pos = i;
-            ++curLeafID;
-        }
-        
-    }
-
-    for(i = 0; i < source->nodesNum; ++i)
-    {
-        curNode = source->nodes[i];
-        for(j = 0; j < curNode->neiNum; ++j)
-        {
-            nodeAddNeighbour(dest->nodes[i],\
-                    dest->nodes[curNode->neighbours[j]->pos], 0);
-        }
-    }
-
-    if (copyLCAFinder)
-    {
-        treeLCAFinderCalculate(dest);
-    }
-    return dest;
-} /* treeCopy */
-
-
-char* treeToString(Tree* tree)
-{
-    char* string = NULL;
-    unsigned stringMaxSize = 100000;
-    unsigned stringCurSize;
-    NodeStack* stack;
-    Node* curNode;
-    Node* nextNode;
-    int i;
-
-    if (tree->leavesNum == 0)
-    {
-        string = (char*)malloc(sizeof(char) * 4);
-        strcpy(string, "();");
-        return string;
-    }
-    treeWash(tree);
-
-    string = (char*)calloc(sizeof(char*), stringMaxSize + 1);
-    
-    stack = nodeStackCreate(tree->nodesNum);
-    curNode = tree->nodes[0];
-    stringCurSize = 0;
-    string[stringCurSize] = '(';
-    ++stringCurSize;
-    
-    nodeStackPush(stack, curNode);
-    curNode->color = GREY;
-    while(stack->curSize != 0)
-    {
-        curNode = nodeStackPeek(stack);
-        nextNode = NULL;
-        for (i = 0; i < curNode->neiNum ; ++i)
-        {
-            if (curNode->neighbours[i]->color == WHITE)
-            {
-                nextNode = curNode->neighbours[i];
-                break;
-            }
-        }
-        if (nextNode)
-        {
-            if (nextNode->name == 0)
-            {
-                if (stringCurSize >= stringMaxSize)
-                {
-                   stringMaxSize = stringMaxSize * 3 / 2 + 1; 
-                   string = realloc(string, sizeof(char) * stringMaxSize);
-                }
-                string[stringCurSize] = '(';
-                ++stringCurSize;
-                nodeStackPush(stack, nextNode);
-                nextNode->color = GREY;
-            }
-            else
-            {
-                nextNode->color = BLACK;
-                if (stringCurSize + strlen(nextNode->name) >= \
-                        stringMaxSize)
-                {
-                    stringMaxSize = stringMaxSize * 3 / 2 + 1;
-                    string = realloc(string, sizeof(char) * stringMaxSize);
-                }
-                strcpy(string + stringCurSize, nextNode->name);
-                stringCurSize += strlen(nextNode->name);
-                if (stringCurSize >= stringMaxSize)
-                {
-                    stringMaxSize = stringMaxSize * 3 / 2 + 1;
-                    string = realloc(string, sizeof(char) * stringMaxSize);
-                }
-                strcpy(string + stringCurSize, nextNode->name);
-                string[stringCurSize] = ',';
-                ++stringCurSize;
-            }
-        }
-        else
-        {
-            nodeStackPop(stack);
-            if (curNode->name != 0)
-            {
-                if (stringCurSize + strlen(curNode->name) >= \
-                        stringMaxSize)
-                {
-                    stringMaxSize = stringMaxSize * 3 / 2 + 1;
-                    string = realloc(string, sizeof(char) * stringMaxSize);
-                }
-                strcpy(string + stringCurSize, curNode->name);
-                stringCurSize += strlen(curNode->name);
-                ++stringCurSize;
-                if (stringCurSize >= stringMaxSize)
-                {
-                    stringMaxSize = stringMaxSize * 3 / 2 + 1;
-                    string = realloc(string, sizeof(char) * stringMaxSize);
-                }   
-            }
-            string[stringCurSize - 1] = ')';
-            string[stringCurSize] = ',';
-            ++stringCurSize;
-            curNode->color = BLACK;
-        }
-    }
-    string[stringCurSize - 1] = ';';
-    string[stringCurSize] = '\0';
-    string = realloc(string, sizeof(char) * (stringCurSize + 1));
-    
-    treeWash(tree);
-    return string;
-} /* treeToString */
-
-
-char* treeConsensusToString(Tree* tree)
-{
-    size_t strCurSize = 0;
-    size_t strMaxSize = default_strSize;
-    char* string = malloc(sizeof(char) * strMaxSize);
-    string[strCurSize++] = '('; 
-    NodeStack* stack = nodeStackCreate(tree->nodesNum);
-    size_t* occStack = malloc(sizeof(size_t) * (tree->nodesNum));
-    size_t occStackSize = 0;
-    Node* curNode = tree->nodes[0];
-    Node* nextNode = NULL;
-    int i = 0;
-    size_t occurence = 0;
-    char needComma = false;
-    char* number = malloc(sizeof(char) * 12);
-
-
-    treeWash(tree);
-    curNode->color = BLACK;
-    nodeStackPush(stack, curNode);
-    while(stack->curSize > 0)
-    {
-        curNode = nodeStackPeek(stack);
-        nextNode = NULL;
-        for (i = 0; i < curNode->neiNum ; ++i)
-        {
-            if (curNode->neighbours[i]->color == WHITE)
-            {
-                nextNode = curNode->neighbours[i];
-                break;
-            }
-        }
-        if (nextNode)
-        {
-            nextNode->color = BLACK; 
-            if (nextNode->name == 0)
-            {
-                if (strCurSize + 1 >= strMaxSize)
-                {
-                    strMaxSize = strMaxSize * 3 / 2 + 1;
-                    string = realloc(string, sizeof(char) * strMaxSize);
-                }
-                if(needComma) string[strCurSize++] = ',';
-                string[strCurSize++] = '(';
-                nodeStackPush(stack, nextNode);
-                if (curNode->dist[i] != 0)//dist from leaf
-                {
-                    occStack[occStackSize++] = curNode->dist[i]; 
-                }
-                needComma = false;
-            }
-            else
-            {// leaf
-                if (strCurSize + strlen(nextNode->name) + 1 >= strMaxSize)
-                {
-                    strMaxSize = strMaxSize * 3 / 2 + 1;
-                    string = realloc(string, sizeof(char) * strMaxSize);
-                }
-                if(needComma) string[strCurSize++] = ',';
-                strcpy(string + strCurSize, nextNode->name);
-                strCurSize = strCurSize + strlen(nextNode->name);
-                needComma = true;
-            }
-        }
-        else
-        {
-            nodeStackPop(stack);
-            if (curNode->name == 0)
-            {
-                if(strCurSize + 10 >= strMaxSize)
-                {
-                    strMaxSize = strMaxSize * 3 / 2 + 1;
-                    string = realloc(string, sizeof(char) * strMaxSize);
-                }
-                string[strCurSize++] = ')';
-                if (occStackSize > 0)
-                {
-                    string[strCurSize++] = ':';
-                    sprintf(number, "%zu", occStack[--occStackSize]);
-                    strcpy(string + strCurSize, number);
-                    strCurSize += strlen(number);
-                }
-            }
-            else//leaf (only for root it's possible)
-            {
-                if(strCurSize + strlen(curNode->name) + 1 >= strMaxSize)
-                {
-                    strMaxSize = strMaxSize * 3 / 2 + 1;
-                    string = realloc(string, sizeof(char) * strMaxSize);
-                }
-                if (needComma) string[strCurSize++] = ',';
-                strcpy(string + strCurSize, curNode->name);
-                strCurSize = strCurSize + strlen(curNode->name);
-            }
-            needComma = true;
-        }
-    }
-
-    if (strCurSize + 3 >= strMaxSize)
-    {
-        strMaxSize = strMaxSize * 3 / 2 + 1;
-        string = realloc(string, sizeof(char) * strMaxSize);
-    }
-    string[strCurSize++] = ')';
-    string[strCurSize++] = ';';
-    string[strCurSize++] = '\0';
-    string = realloc(string, sizeof(char) * strlen(string));
-    treeWash(tree);
-    free(number);
-    nodeStackDelete(stack);
-    free(occStack);
-    return string;
-}/*treeConsensusToString*/
-
-
-void treeConsensusWrite(Tree* tree, char* outFileName)
-{
-    FILE* outFile;
-    char* result; 
-    int i = 0;
-    int j = 0;
-
-    if(strcmp(outFileName, "stdout") == 0)
-    {
-        outFile = stdout;
-    }
-    else 
-    {
-        outFile = fopen(outFileName, "w");
-        if(outFile == NULL)
-        {
-            fprintf(stderr, "Cannot open %s for writing\n", outFileName);
-            exit(1);
-        }
-    }
-
-    result = treeConsensusToString(tree);
-
-    while ( result[i] != '\0') {
-        if ( j > 60 && result[i] == ',' ) 
-        {
-            putc(result[i], outFile);
-            putc('\n', outFile);
-            j = 0;
-        }
-        else 
-        {
-            putc(result[i], outFile);
-        }
-        i++;
-        j++;
-    }
-    putc('\n', outFile);
-    free(result);
-    fclose(outFile);
-    return;
-} /* treeConsensusWrite */
-
-Tree* treeAddLeaf(Tree* tree, unsigned nodeID, unsigned neighbourID, char* leafName,\
-        char newTree, char calcLCAFinder)
-{
-    Tree* result;
-    Node* prevNei;
-    Node* newNode;
-    Node* newLeaf;
-    int i;
-
-    if (tree == 0)
-    {
-        fprintf(stderr, "Error, null tree pointer, Tree:addLeaf\n");
-        exit(1);
-    }
-    if (tree->leavesNum == 0)
-    {
-        fprintf(stderr, "Error, cant add to empty tree, Tree:addLeaf\n");
-        exit(1);
-    }
-    if (nodeID >= tree->nodesNum)
-    {
-        fprintf(stderr, "Error, node index is out, Tree:addLeaf\n");
-        exit(1);
-    }
-    if (neighbourID >= tree->nodes[nodeID]->neiNum)
-    {
-        fprintf(stderr, "Error, neighbour index is out of range, (%d of %d)\
-                Tree:addLeaf\n", neighbourID, tree->nodes[nodeID]->neiNum);
-        exit(1);
-    }
-
-    result = tree;
-    if (newTree)
-    {
-        result = treeCopy(tree, 0);
-    }
-
-    prevNei = result->nodes[nodeID]->neighbours[neighbourID];
-    newNode = nodeCreate();
-    result->nodes[nodeID]->neighbours[neighbourID] = newNode;
-    for(i = 0; i < prevNei->neiNum; ++i)
-    {
-        if (prevNei->neighbours[i] == result->nodes[nodeID])
-        {
-            prevNei->neighbours[i] = newNode;
-            break;
-        }
-    }
-    nodeAddNeighbour(newNode, result->nodes[nodeID], 0);
-    nodeAddNeighbour(newNode, prevNei, 0);
-    newLeaf = leafCreate(leafName);
-    nodeAddNeighbour(newNode, newLeaf, 0);
-    nodeAddNeighbour(newLeaf, newNode, 0);
-
-    result->leaves = realloc(result->leaves, sizeof(Node*) * \
-            (result->leavesNum + 1));
-    result->leaves[result->leavesNum] = newLeaf;
-    ++result->leavesNum;
-    result->nodesNum += 2;
-    result->nodes = realloc(result->nodes, sizeof(Node*) * \
-            (result->nodesNum));
-    result->nodes[result->nodesNum - 2] = newNode;
-    result->nodes[result->nodesNum - 1] = newLeaf;
-    newLeaf->pos = result->nodesNum - 1;
-    newNode->pos = result->nodesNum - 2;
-
-    if (result->lcaFinder!= 0)
-    {
-        lcaFinderDelete(result->lcaFinder);
-        result->lcaFinder = 0;
-    }
-
-    if (calcLCAFinder)
-    {
-        treeLCAFinderCalculate(result);
-    }
-    return result;
-} /* treeAddLeaf */
-
-
-Tree* treeRemoveLeaf(Tree* tree, unsigned leafPos, char newTree, char calcLCAFinder)
-{
-    Tree* result;
-    Node* delNode;
-    Node* nei1;
-    Node* nei2;
-    int i, j;
-    int pos1, pos2;
-    int delNodePos, delLeafPos;
-
-    if (leafPos >= tree->leavesNum)
-    {
-        fprintf(stderr, "Error, leaf pos is out of range, Tree:removeLeaf\n");
-        exit(1);
-    }
-    i = 0;
-    result = tree;
-    if (newTree)
-    {
-        result = treeCopy(tree, 0);
-    }
-    j = 0;
-    if (tree->leavesNum == 1)
-    {
-        free(tree->nodes);
-        result->nodes = 0;
-        free(tree->leaves);
-        result->leaves = 0;
-        --result->leavesNum;
-        return tree;
-    }
-
-    delNode = result->leaves[leafPos]->neighbours[0];
-    if (delNode->neiNum == 1) // good tree:) (A, B);
-    {
-        delNode->neighbours[0] = 0;
-        delNode->neiNum = 0;
-        if (result->nodes[result->leaves[leafPos]->pos]->pos == 0)
-        {
-            result->nodes[0] = result->nodes[1];
-        }
-        if (leafPos == 0)
-        {
-            nodeDelete(result->leaves[0]);
-            result->leaves[0] = result->leaves[1];
-            result->leaves[0]->pos = 0;
-        }
-        result->nodes = realloc(result->nodes, sizeof(Node*));
-        result->leaves = realloc(result->leaves, sizeof(Node*));
-        --result->leavesNum;
-    }
-    else
-    {
-        nei1 = NULL;
-        nei2 = NULL;
-        if (delNode->neighbours[0] == result->leaves[leafPos])
-        {
-            nei1 = delNode->neighbours[1];
-            nei2 = delNode->neighbours[2];
-        }
-        else if (delNode->neighbours[1] == result->leaves[leafPos])
-        {
-            nei1 = delNode->neighbours[0];
-            nei2 = delNode->neighbours[2];
-        }
-        else
-        {
-            nei1 = delNode->neighbours[0];
-            nei2 = delNode->neighbours[1];
-        }
-
-        pos1 = 0;      
-        pos2 = 0;
-        for(i = 0; i < nei1->neiNum; ++i)
-        {
-            if (nei1->neighbours[i] == delNode)
-            {
-                pos1 = i;
-                break;
-            }
-        }
-        for(i = 0; i < nei2->neiNum; ++i)
-        {
-            if (nei2->neighbours[i] == delNode)
-            {
-                pos2 = i;
-                break;
-            }
-        }
-        nei1->neighbours[pos1] = nei2;
-        nei2->neighbours[pos2] = nei1;
-
-        delNodePos = delNode->pos;
-        delLeafPos = result->leaves[leafPos]->pos;
-        nodeDelete(result->leaves[leafPos]);
-        nodeDelete(delNode);
-        --result->leavesNum;
-        result->nodesNum = result->nodesNum - 2; 
-
-        result->nodes[delNodePos] = result->nodes[result->nodesNum - 1];
-        result->nodes[delLeafPos] = result->nodes[\
-                                                  result->nodesNum];
-        result->leaves[leafPos] = result->leaves[result->leavesNum];
-
-        if (leafPos < result->leavesNum)
-        {
-            result->leaves[leafPos]->pos = leafPos;
-        }
-        if (delNodePos < result->nodesNum )
-        {
-            result->nodes[delNodePos]->pos = delNodePos;
-        }
-
-        result->leaves = realloc(result->leaves, sizeof(Node*) *\
-            result->leavesNum);
-        result->nodes = realloc(result->nodes, sizeof(Node*) *\
-            (result->nodesNum));
-    }
-
-    if (result->lcaFinder != 0)
-    {
-        lcaFinderDelete(result->lcaFinder);
-        result->lcaFinder = 0;
-    }
-    if (calcLCAFinder)
-    {
-        treeLCAFinderCalculate(result);
-    }
-    return result;
-} /* treeRemoveLeaf */
-
-void treeWrite(Tree* tree, char* outFileName)
-{
-    FILE* outFile;
-    char* result; 
-    int i = 0;
-    int j = 0;
-
-    if(strcmp(outFileName, "stdout") == 0)
-    {
-        outFile = stdout;
-    }
-    else 
-    {
-        outFile = fopen(outFileName, "w");
-        if(outFile == NULL)
-        {
-            fprintf(stderr, "Cannot open %s for writing\n", outFileName);
-            exit(1);
-        }
-    }
-
-    result = treeToString(tree);
-
-    while ( result[i] != '\0') {
-        if ( j > 60 && result[i] == ',' ) 
-        {
-            putc(result[i], outFile);
-            putc('\n', outFile);
-            j = 0;
-        }
-        else 
-        {
-            putc(result[i], outFile);
-        }
-        i++;
-        j++;
-    }
-    putc('\n', outFile);
-    free(result);
-    fclose(outFile);
-    return;
-} /* treeWrite */
-
-Tree* treeRead(char* inFileName)
-{
-    int strTreeSize = 100;
-    FILE* inFile = NULL;
-    char* line = NULL;
-    int strSize = 0;
-    char* strNewickTree = NULL;
-    Tree* result = NULL;
-
-    inFile = fopen(inFileName, "r");
-    if (inFile == NULL)
-    {
-        fprintf(stderr, "Wrong file name or no access to read file, Tree:treeRead\n");
-        exit(1);
-    } 
-    strSize = strTreeSize;
-    strNewickTree = (char*)malloc(sizeof(char) * strSize);
-    strNewickTree[0] = '\0';
-
-    while ((line = readLine(inFile)) != NULL)
-    {
-        if ( (strlen(strNewickTree) + strlen(line)) >= strSize)
-        {
-            strSize = (strSize + strlen(line)) * 3 / 2 + 1;
-            strNewickTree = realloc(strNewickTree, sizeof(char) * strSize);
-        }
-        memcpy(strNewickTree + strlen(strNewickTree), line, strlen(line) + 1);
-        free(line);
-    }
-
-    result = treeFromNewick(strNewickTree);
-    free(strNewickTree);
-    fclose(inFile);
-    return result;
-} /* treeRead */
-
-
-LCAFinder* lcaFinderCreate()
-{
-    LCAFinder* lcaFinder;
-    lcaFinder = malloc(sizeof(LCAFinder));
-    lcaFinder->sparceTable = 0;
-    lcaFinder->vertices = 0;
-    lcaFinder->inPos = 0;
-    lcaFinder->deep = 0;
-    return lcaFinder;
 }
 
-void lcaFinderDelete(LCAFinder* lcaFinder)
+int main(int argc, char** argv)
 {
-    if (lcaFinder->sparceTable != 0)
-    {
-        sparseTableDelete(lcaFinder->sparceTable);
+    HashAlignment* inAlignment;
+    HashAlignment* alignment;
+    HashAlignment** alignmentSample;
+    char* outFileName = NULL;
+    PWM* pwmMatrix = NULL;
+    unsigned i;
+    unsigned j;
+    int alpha = 1;
+    int randLeaves = 1;
+    char* grType;
+    unsigned treeNum = 10;
+    unsigned iterNum = 100;
+    unsigned iterLim = 25; 
+    char* nniType;
+    unsigned long int trTime = 1000;
+    unsigned int initTemp = 1000;
+    unsigned int mcStyle = 1;
+    char* sprType;
+    char* sampleType;
+    char* distrFileName = NULL;
+    char* inTreeFileName = NULL;
+    char doConsensus = 0;
+    char extended = 1;
+    unsigned randTreeNum = 10;
+    unsigned resultTreeNum = 1;
+    double removeFraction = 0.5;
+    TreeWithScore** resultTrees = NULL;
+    int maxScore = 1;
+    int neiZscore = 0;
+    int randTreeZscore = 0;
+    GapOpt gapOpt = PASS_ANY;
+    char* param;
+    int known;
+    int alignmentSet;
+    int startOptionsNum;
+    INT**** hashScore;
+    Tree* iniTree;
+    TreeWithScore* result = NULL;
+    TreeWithScore** trees;
+    Tree** treesTemp;
+    TreeWithScore* nniResult;
+    Trajectory* resultTrajectory;
+    TreeWithScore* sprResult;
+    double relativeScore;
+    char** treeNames;
+    char** seqNames;
+    int* permutation;
+    TreeWithScore** neighbours;
+    Sample* sample;
+    FILE* distrFile;
+    TreeWithScore** treeSample;
+    FILE* inTreeStream;
+    char* newick;
+    unsigned newickSize;
+    unsigned end;
+    char* chType; 
+    char* fileName;
+
+    /* default values for string parameters */
+    grType = (char *)malloc(sizeof(char) * 12);
+    strcpy(grType, "multiple");
+    nniType = (char *)malloc(sizeof(char) * 12);
+    strcpy(nniType, "direct");
+    sprType = (char *)malloc(sizeof(char) * 12);
+    strcpy(sprType, "none");
+    chType = (char*)malloc(sizeof(char) * 12); 
+    strcpy(chType, "bestScore");
+    sampleType = (char*)malloc(sizeof(char) * 12);
+    strcpy(sampleType, "simple");
+   
+    /* Help */  
+    if (argc == 1){
+        printHelp(argv[0]);
+        exit(0);
     }
-    if (lcaFinder->inPos != 0)
+    if ( (strcmp(argv[1], "-h") == 0) || (strcmp(argv[1], "-help") == 0) || (strcmp(argv[1], "--help") == 0) )
     {
-        free(lcaFinder->inPos);
-    }
-    if (lcaFinder->deep != 0)
-    {
-        free(lcaFinder->deep);
-    }
-    if (lcaFinder->vertices != 0)
-    {
-        free(lcaFinder->vertices);
-    }
-    free(lcaFinder);
-    lcaFinder = 0;
-    return;
-} /* lacaFinderDelete */
-
-void  treeLCAFinderCalculate(Tree* tree)
-{
-    int i = 0;
-    NodeStack* stack;
-    Node* curNode;
-    Node* nextNode = NULL;
-    unsigned curDeep = 0;
-    unsigned curPos = 0;
-    LCAFinder* lcaFinder;
-
-    if (tree->lcaFinder != 0)
-    {
-        lcaFinderDelete(tree->lcaFinder);
-        tree->lcaFinder = 0;
+        printLongHelp();
+        exit(0);
     }
 
-    treeWash(tree);
-    lcaFinder = lcaFinderCreate();
-    lcaFinder->vertices = calloc(sizeof(unsigned), tree->nodesNum * 2 - 1);
-    lcaFinder->deep = calloc(sizeof(unsigned), tree->nodesNum * 2 - 1);
-    lcaFinder->inPos = calloc(sizeof(unsigned), tree->nodesNum);
+    /* *********************************************
+     *    Parsing command line and input 
+     *    *****************************************/
 
-    stack = nodeStackCreate(tree->nodesNum);
-
-    i = 0;
-    while (tree->nodes[i]->name != 0){++i;}
-    curNode = tree->nodes[i];
-    nextNode = 0;
-
-    nodeStackPush(stack, curNode);
-    curNode->color = GREY;
-    lcaFinder->inPos[curNode->pos] = curPos;
-    
-    while (stack->curSize != 0)
+    param = (char *)malloc(sizeof(char) * 128);
+    alignmentSet = 0;
+    startOptionsNum = 1;
+    while (startOptionsNum < argc)
     {
-        curNode = nodeStackPeek(stack);
-        lcaFinder->vertices[curPos] = curNode->pos;
-        lcaFinder->deep[curPos] = curDeep;
-        ++curPos; 
-        nextNode = 0;
-        for (i = 0; i < curNode->neiNum; ++i)
+        strcpy(param, argv[startOptionsNum]);
+
+        known = 0;      /* we do not recognize this argument yet */
+        if(param[0] == '-')
         {
-            if (curNode->neighbours[i]->color == WHITE)
+            if (strcmp(param, "-alignment") == 0)
             {
-                nextNode = curNode->neighbours[i];
-                break;
+                known = 1;  /* yes, we know this argument name! */
+                if (startOptionsNum + 1 < argc)
+                {
+                    inAlignment = hashAlignmentRead(argv[startOptionsNum + 1]);
+                    alignmentSet = 1;
+                }
             }
-        }
-        if (nextNode)
+            if (strcmp(param, "-out") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    outFileName = (char *)malloc(sizeof(char) * (strlen(argv[startOptionsNum + 1] + 1)));
+                    strcpy(outFileName, argv[startOptionsNum + 1]);
+                }
+                printf("Start computing\n");
+            }
+            if (strcmp(param, "-pwm") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    pwmMatrix = pwmRead(argv[startOptionsNum + 1]);
+                }
+            }
+            if (strcmp(param, "-alpha") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    alpha = atoi(argv[startOptionsNum + 1]);
+                }
+            }
+            if (strcmp(param, "-storeHash") == 0)
+            {
+                known = 1;
+                fprintf(stderr, "Warning: setting -storeHash has no effect in this version, it is always 1\n");
+            }
+            if (strcmp(param, "-randLeaves") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    randLeaves = atoi(argv[startOptionsNum + 1]);
+                }
+            }
+            if (strcmp(param, "-grType") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    if (strlen(argv[startOptionsNum + 1]) < 12) 
+                    {
+                        strcpy(grType, argv[startOptionsNum + 1]);
+                    }
+                    else
+                    {
+                        fprintf(stderr, "Unknown grType: %s -- ignored\n", argv[startOptionsNum + 1]);
+                    }
+                }
+            }
+            if (strcmp(param, "--treeNum") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    treeNum = atoi(argv[startOptionsNum + 1]);
+                }
+            }
+            if (strcmp(param, "--chType") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    chType = argv[startOptionsNum + 1];
+                }
+            }
+            //----------------------
+            if (strcmp(param, "--iterNum") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    iterNum = atoi(argv[startOptionsNum + 1]);
+                }
+            }
+            if (strcmp(param, "--iterLim") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    iterLim = atoi(argv[startOptionsNum + 1]);
+                }
+            }
+            //----------------------
+            if (strcmp(param, "-nniType") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    if (strlen(argv[startOptionsNum + 1]) < 12) 
+                    {
+                        strcpy(nniType, argv[startOptionsNum + 1]);
+                    }
+                    else
+                    {
+                        fprintf(stderr, "Unknown nniType: %s -- ignored\n", argv[startOptionsNum + 1]);
+                    }
+                }
+            }
+            if (strcmp(param, "--trTime") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    trTime = atoi(argv[startOptionsNum + 1]);
+                }
+            }
+            if (strcmp(param, "--initTemp") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    initTemp = atoi(argv[startOptionsNum + 1]);
+                }
+            }
+            if (strcmp(param, "--mcStyle") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    mcStyle = atoi(argv[startOptionsNum + 1]);
+                }
+            }
+            if (strcmp(param, "-sprType") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    if (strlen(argv[startOptionsNum + 1]) < 12) 
+                    {
+                        strcpy(sprType, argv[startOptionsNum + 1]);
+                    }
+                    else
+                    {
+                        fprintf(stderr, "Unknown sprType: %s -- ignored\n", argv[startOptionsNum + 1]);
+                    }
+
+                }
+            }
+            if (strcmp(param, "-tbrType") == 0)
+            {
+                known = 1;
+                fprintf(stderr, "Warning: TBR is not suppoted in this version, setting -tbrType is ignored\n");
+            }
+            if (strcmp(param, "-maxScore") == 0)
+            {
+                known = 1;
+                fprintf(stderr, "Warning: setting -maxScore has no effect in this version, it is always 1\n");
+                if (startOptionsNum + 1 < argc)
+                {
+                     maxScore = atoi(argv[startOptionsNum + 1]);
+                }
+            }
+            if (strcmp(param, "-neiZscore") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                     neiZscore = atoi(argv[startOptionsNum + 1]);
+                }
+            }
+            if (strcmp(param, "-randTreeZscore") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    randTreeZscore = atoi(argv[startOptionsNum + 1]);
+                }
+            }
+            if (strcmp(param, "-distrFile") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    distrFileName = (char *)malloc(sizeof(char) * (strlen(argv[startOptionsNum + 1] + 1)));
+                    strcpy(distrFileName, argv[startOptionsNum + 1]);
+                }
+            }
+            if (strcmp(param, "--randTreeNum") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    randTreeNum = atoi(argv[startOptionsNum + 1]);
+                }
+            }
+            if (strcmp(param, "-iniTree") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    inTreeFileName = (char *)malloc(sizeof(char) * (strlen(argv[startOptionsNum + 1] + 1)));
+                    strcpy(inTreeFileName, argv[startOptionsNum + 1]);
+                }
+            }
+            if (strcmp(param, "-resultTreeNum") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    resultTreeNum = atoi(argv[startOptionsNum + 1]);
+                }
+            }
+            if (strcmp(param, "-sampleType") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    sampleType = (char*)malloc(sizeof(char) *\
+                            (strlen(argv[startOptionsNum + 1]) + 1));
+                    strcpy(sampleType, argv[startOptionsNum + 1]);
+                }
+            }
+            if (strcmp(param, "--removeFraction") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    removeFraction = atof(argv[startOptionsNum + 1]);
+                }
+            }
+            if (strcmp(param, "-doConsensus") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    doConsensus = atoi(argv[startOptionsNum + 1]);
+                }
+            }
+            if (strcmp(param, "-gapOpt") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    if ((strcmp(argv[startOptionsNum + 1], "passNot") == 0) ||\
+                        (strcmp(argv[startOptionsNum + 1], "2") == 0)) 
+                    {
+                        gapOpt = PASS_NOT;
+                    }
+                    else if ((strcmp(argv[startOptionsNum + 1], "passPair") == 0)||\
+                             (strcmp(argv[startOptionsNum + 1], "1") == 0)) 
+                    {
+                        gapOpt = PASS_PAIR;
+                    }
+                    else if ((strcmp(argv[startOptionsNum + 1], "passAny") == 0)||\
+                             (strcmp(argv[startOptionsNum + 1], "0") == 0)) 
+                    {
+                        gapOpt = PASS_ANY;
+                    }
+                    else
+                    {
+                        fprintf(stderr, "Error: wrong value for gapOpt: %s\n", argv[startOptionsNum + 1]);
+                        fprintf(stderr, "gapOpt should be 0, 1 or 2\n");
+                        exit(1);
+                    }
+                }
+            }
+        } /* if argument starts with '-' */
+        if (known == 0) /* we cannot recognize this argument name ... */
         {
-            ++curDeep;
-            lcaFinder->inPos[nextNode->pos] = curPos;
-            nodeStackPush(stack, nextNode);
-            nextNode->color = GREY;
+            printf("%s\n", argv[startOptionsNum]);
+            fprintf(stderr, "Wrong command line argument: %s\n", param);
+            exit(1);
         }
         else
         {
-            nodeStackPop(stack);
-            --curDeep;
+            startOptionsNum += 2;
+        }
+    }  /* while */
+
+    if (alignmentSet == 0)
+    {
+        fprintf(stderr, "Error: no input alignment is given\n");
+        exit(1);
+    }
+    if (outFileName == NULL)
+    {
+        fprintf(stderr, "Warning: no output file name is given; the result will be written to \"pq_out.tre\"\n");
+        outFileName = (char *)malloc(sizeof(char) * 12);
+        strcpy(outFileName, "pq_out.tre");
+    }
+
+/***********************************************************
+ *                     Calculations                        *
+ ***********************************************************/
+    
+    alignmentSample = malloc(sizeof(HashAlignment*) * resultTreeNum);
+    alignmentSample[0] = inAlignment;
+    if (strcmp(sampleType, "simple") == 0)
+    {
+        for(i = 1; i < resultTreeNum; ++i)
+        {
+            alignmentSample[i] = inAlignment;
         }
     }
-
-    if (curPos != tree->nodesNum * 2 - 1)
+    else if (strcmp(sampleType, "bootstrap") == 0)
     {
-        fprintf(stderr, "Error, something have gone wrong, Tree:LCAFinderCalculate\n");
-        fprintf(stderr, "nodesNum : %u; curPos : %u\n", tree->nodesNum, curPos);
-        fprintf(stderr, "%s\n", treeToString(tree));
-        exit(1);
-    }
-    lcaFinder->sparceTable = sparseTableCalculate(lcaFinder->deep,\
-            curPos);
-    tree->lcaFinder = lcaFinder;
-    treeWash(tree);
-    return;
-} /*  treeLCAFinderCalculate */ 
-
-unsigned treeFindLCADeep(Tree* tree, unsigned leaf1ID, unsigned leaf2ID)
-{
-    if (tree->lcaFinder == 0)
-    {
-        fprintf(stderr, "Error, to use function treeFindLCADeep you must\
-                calculate tree's lcaFinder first, Tree:treeFindLCADeep\n");
-        exit(1);
-    }
-    return tree->lcaFinder->deep[sparseTableRMQ(tree->lcaFinder->sparceTable,\
-            tree->lcaFinder->inPos[tree->leaves[leaf1ID]->pos],\
-            tree->lcaFinder->inPos[tree->leaves[leaf2ID]->pos])];
-} /* treeFindLCADeep */
-
-unsigned treeFindLCA(Tree* tree, unsigned node1ID, unsigned node2ID)
-{
-    if (tree->lcaFinder == 0)
-    {
-        fprintf(stderr, "Error, to use function treeFindLCA you must\
-                calculate tree's lcaFinder first, Tree:treeFindLCA\n");
-        exit(1);
-    }
-    return tree->lcaFinder->vertices[sparseTableRMQ(tree->lcaFinder->sparceTable,\
-            tree->lcaFinder->inPos[tree->nodes[node1ID]->pos],\
-            tree->lcaFinder->inPos[tree->nodes[node2ID]->pos])];
-} /* treeFindLCA */
-
-unsigned treeWhichSplit(Tree* tree,\
-        unsigned leaf1, unsigned leaf2,\
-        unsigned leaf3, unsigned leaf4)
-{
-    unsigned deep12;
-    unsigned deep13;
-    unsigned deep14;
-    unsigned deep23;
-    unsigned deep24;
-    unsigned deep34;
-    int result = 2;
-    int maxDeep;
-
-    
-    if (leaf1 >= tree->leavesNum || leaf2 >= tree->leavesNum ||\
-            leaf3 >= tree->leavesNum || leaf4 >= tree->leavesNum)
-    {
-        fprintf(stderr, "Error, leaf index is out of range, \
-                Tree:whichSplit");
-        exit(1);
-    }
-
-    deep12 = treeFindLCADeep(tree, leaf1, leaf2);
-    deep13 = treeFindLCADeep(tree, leaf1, leaf3);
-    deep14 = treeFindLCADeep(tree, leaf1, leaf4);
-    deep23 = treeFindLCADeep(tree, leaf2, leaf3);
-    deep24 = treeFindLCADeep(tree, leaf2, leaf4);
-    deep34 = treeFindLCADeep(tree, leaf3, leaf4);
-
-    result = 2;
-    maxDeep = deep12; 
-    if (deep13 > maxDeep)
-    {
-        result = 3;
-        maxDeep = deep13;
-    }
-    if (deep14 > maxDeep)
-    {
-        result = 4;
-        maxDeep = deep14;
-    }
-    if (deep23 > maxDeep)
-    {
-        result = 4;
-        maxDeep = deep23;
+        for(i = 1; i < resultTreeNum; ++i)
+        {
+            alignmentSample[i] = hashAlignmentBootstrap(inAlignment); 
+        }
     } 
-    if (deep24 > maxDeep)
+    else if (strcmp(sampleType, "jackknife") == 0)
     {
-        result = 3;
-        maxDeep = deep24;
-    }
-    if  (deep34 > maxDeep)
-    {
-        result = 2;
-        maxDeep = deep34;
-    }
-    return result;
-} /* whichSplitTree */
-
-
-Tree* treeNNIMove(Tree* tree, unsigned nodeID, unsigned neiID, char variant,\
-        char newTree, char calcLCAFinder)
-{
-    int i = 0;
-    Tree* result;
-    Node* end1;
-    Node* end2;
-    Node* temp;
-    char nei11 = 0;
-    char nei12 = 0;
-    char nei21 = 0;
-    char nei22 = 0;
-    char nei2ID = 0;
-
-
-    if (tree->leavesNum == 0)
-    {
-        fprintf(stderr, "Error, can't apply nni to the empty tree, Tree:nniMove\n");
-        exit(1);
-    }
-    if (nodeID >= tree->nodesNum)
-    {
-        fprintf(stderr, "Error, node id is out of range, Tree:treeNNIMove");
-        exit(1);
-    }
-    if (neiID >= tree->nodes[nodeID]->neiNum)
-    {
-        fprintf(stderr, "Error, neighbour id is out of range, Tree:treeNNIMove");
-        exit(1);
-    }
-    if (tree->nodes[nodeID]->neiNum == 1 || tree->nodes[nodeID]\
-            ->neighbours[neiID]->neiNum == 1)
-    {
-        fprintf(stderr, "Error, can't apply nni to branche having leaf as one end\n");
-        exit(1);
-    }
-    if (variant != 2 && variant != 1)
-    {
-        fprintf(stderr, "Error, variant variable must be 1 or 2\n");
-        exit(1);
-    }
-
-    result = tree;
-    if (newTree)
-    {
-        result = treeCopy(tree, 0);
-    }
-
-
-    end1 = result->nodes[nodeID];
-    end2 = result->nodes[nodeID]->neighbours[neiID];
-    switch (neiID)
-    {
-        case 0:
-            nei11 = 1;
-            nei12 = 2;
-            break;
-        case 1:
-            nei11 = 0;
-            nei12 = 2;
-            break;
-        case 2:
-            nei11 = 0;
-            nei12 = 1;
-            break;
-        default:
-            fprintf(stderr, "Error, some wrong with neiID\n");
-            exit(1);
-    }
-
-    nei21 = 0; 
-    nei22 = 0;
-    nei2ID = 0;
-    if (end2->neighbours[0] == end1)
-    {
-        nei2ID = 0;
-        nei21 = 1;
-        nei22 = 2;
-    }
-    else if(end2->neighbours[1] == end1)
-    {
-        nei2ID = 1;
-        nei21 = 0;
-        nei22 = 2;
-    }
-    else if(end2->neighbours[2] == end1)
-    {
-    
-        nei2ID = 2;
-        nei21 = 0;
-        nei22 = 1;
-    }
-
-    if (variant == 1)
-    {
-
-        for(i = 0; i < end1->neighbours[nei11]->neiNum; ++i)
+        for(i = 1; i < resultTreeNum; ++i)
         {
-            if (end1->neighbours[nei11]->neighbours[i] == end1)
-            {
-                end1->neighbours[nei11]->neighbours[i] = end2;
-                break;
-            }
+            alignmentSample[i] = hashAlignmentJackknife(inAlignment, removeFraction);
         }
-        for(i = 0; i < end2->neighbours[nei21]->neiNum; ++i)
-        {
-            if (end2->neighbours[nei21]->neighbours[i] == end2)
-            {
-                end2->neighbours[nei21]->neighbours[i] = end1;
-                break;
-            }
-        }
-        temp = end1->neighbours[nei11];
-        end1->neighbours[nei11] = end2->neighbours[nei21];
-        end2->neighbours[nei21] = temp;
     }
     else
     {
-        for(i = 0; i < end1->neighbours[nei11]->neiNum; ++i)
+        raiseError("Wrong value of argument for sampleType", __FILE__,
+                __FUNCTION__, __LINE__);
+    }
+
+    resultTrees = malloc(sizeof(TreeWithScore*) * resultTreeNum);
+    for(j = 0; j < resultTreeNum; ++j)
+    {
+        alignment = alignmentSample[j];
+        hashScore = getHashScore(alignment->alignmentSize);
+    if (inTreeFileName == NULL)
+    {
+        if (strcmp(grType, "one") == 0)
         {
-            if (end1->neighbours[nei11]->neighbours[i] == end1)
+            result = oneTreeGrow(alignment, alpha, gapOpt, pwmMatrix, hashScore, randLeaves);
+        }
+        else if (strcmp(grType, "multiple") == 0)
+        {
+            trees = multipleTreeGrow(alignment, alpha, gapOpt, pwmMatrix, treeNum, hashScore);
+
+            if (strcmp(chType, "bestScore") == 0)
             {
-                end1->neighbours[nei11]->neighbours[i] = end2;
-                break;
-            }
-        }
-        for(i = 0; i < end2->neighbours[nei22]->neiNum; ++i)
-        {
-            if (end2->neighbours[nei22]->neighbours[i] == end2)
-            {
-                end2->neighbours[nei22]->neighbours[i] = end1;
-                break;
-            }
-        }
-        temp = end1->neighbours[nei11];
-        end1->neighbours[nei11] = end2->neighbours[nei22];
-        end2->neighbours[nei22] = temp;
-    }
-
-    if (result->lcaFinder != 0)
-    {
-        lcaFinderDelete(result->lcaFinder);
-        result->lcaFinder = 0;
-    }
-    if (calcLCAFinder)
-    {
-        treeLCAFinderCalculate(result);
-    }
-    return result;
-} /*  treeNNIMove */
- 
-char** treeGetNames(Tree* tree)
-{
-    int i;
-    char** namesArr;
-    namesArr = calloc(sizeof(char*), tree->leavesNum);
-    for(i = 0; i < tree->leavesNum; ++i)
-    {
-        namesArr[i] = tree->leaves[i]->name;
-    }
-    return namesArr;
-} /* treeGetnames */
-
-Tree* treeSPRMove(Tree* tree, unsigned sourceNodeID, unsigned sourceNeiPos,\
-              unsigned destNodeID, unsigned destNeiID,\
-              unsigned* newBranchNodeID, unsigned* newBranchNeiID,\
-              char newTree, char calcLCAFinder)
-{
-    int i;
-    Tree* result;
-    unsigned sourceChild;
-    unsigned sourceParent;
-    unsigned nei1Pos, nei2Pos = 0;
-    unsigned upID, bottomID;
-    unsigned newNei1ID, newNei2ID;
-
-
-    if (tree->leavesNum == 0)
-    {
-        fprintf(stderr, "Error, cant apply SPR to empty tree, Tree:treeSPRMove\n");
-        exit(1);
-    }
-    if (sourceNodeID >= tree->nodesNum ||\
-            destNodeID >= tree->nodesNum)
-    {
-        fprintf(stderr, "Error, node id is out of range, Tree:treeSPRMove\n");
-        exit(1);
-    }
-    if (sourceNeiPos >= tree->nodes[sourceNodeID]->neiNum ||\
-            destNeiID >= tree->nodes[destNodeID]->neiNum)
-    {
-        fprintf(stderr, "Error, neighbour id is out of range, Tree:treeSPRMove\n");
-        exit(1);
-    }
-
-
-    if (sourceNodeID == destNodeID && destNeiID == sourceNeiPos)
-    {
-        fprintf(stderr, "Error, source and nei branch is the same one,\
-                Tree:treeSPRMove\n");
-        exit(1);
-    }
-    if (sourceNodeID == destNodeID || \
-            sourceNodeID == tree->nodes[destNodeID]->neighbours[destNeiID]->pos\
-            || tree->nodes[sourceNodeID]->neighbours[sourceNeiPos]->pos == destNodeID\
-            || tree->nodes[sourceNodeID]->neighbours[sourceNeiPos]->pos ==\
-            tree->nodes[destNodeID]->neighbours[destNeiID]->pos)
-    {
-        fprintf(stderr, "source branch is neihghbour of dest, Tree:treeSPRMove\n");
-        exit(1);
-    }
-
-    result = tree;
-    if (newTree)
-    {
-        result = treeCopy(tree, 0);
-    }
-    if (tree->lcaFinder == 0)
-    {
-        treeLCAFinderCalculate(tree);
-    }
-
-    sourceChild = tree->nodes[sourceNodeID]->neighbours[sourceNeiPos]->pos;
-    sourceParent = sourceNodeID;
-
-    if (tree->lcaFinder->inPos[sourceChild] < tree->lcaFinder->inPos[sourceParent])
-    {
-        sourceParent = sourceChild;
-        sourceChild = sourceNodeID;
-    }
-
-    nei1Pos = 0;
-    nei2Pos = 0;
-    upID = 0;
-    bottomID = 0;
-    // nei1-up-nei2               nei1 - nei2
-    //      |          ->             + 
-    //    bottom                       up
-    //    |    |                        |
-    //                                bottom
-    //                                |    |
-
-
-    if (treeFindLCA(tree, sourceChild, destNodeID) == sourceChild)
-    {
-        upID = sourceChild;
-        bottomID = sourceParent;
-    }
-    else
-    {
-        upID = sourceParent;
-        bottomID = sourceChild;
-    }
-
-    
-    if (result->nodes[upID]->neighbours[0]->pos == bottomID)
-    {
-        nei1Pos = 1;
-        nei2Pos = 2;
-    }
-    else if (result->nodes[upID]->neighbours[1]->pos == bottomID)
-    {
-        nei1Pos = 0;
-        nei2Pos = 2;
-    }
-    else
-    {
-        nei1Pos = 0;
-        nei2Pos = 1;
-    }
-
-    for(i = 0; i < result->nodes[upID]->neighbours[nei1Pos]->neiNum; ++i)
-    {
-        if (result->nodes[upID]->neighbours[nei1Pos]->neighbours[i]->pos == upID)
-        {
-
-            if (newBranchNodeID != 0)
-            {
-                *newBranchNodeID = result->nodes[upID]->neighbours[nei1Pos]->pos;
-                *newBranchNeiID = i;
-            }
-            result->nodes[upID]->neighbours[nei1Pos]->neighbours[i] = \
-            result->nodes[upID]->neighbours[nei2Pos];
-            break;
-        } 
-    }
-
-
-    for(i = 0; i < result->nodes[upID]->neighbours[nei2Pos]->neiNum; ++i)
-    {
-        if (result->nodes[upID]->neighbours[nei2Pos]->neighbours[i]->pos == upID)
-        {
-            result->nodes[upID]->neighbours[nei2Pos]->neighbours[i] = \
-                result->nodes[upID]->neighbours[nei1Pos];
-            break;
-        } 
-    } 
-
-    //result->nodes[upID]->neighbours[nei1Pos] = 0;
-    //result->nodes[upID]->neighbours[nei2Pos] = 0;
-
-    newNei1ID = destNodeID;
-    newNei2ID = result->nodes[destNodeID]->neighbours[destNeiID]->pos;
-
-    result->nodes[upID]->neighbours[nei1Pos] = result->nodes[newNei1ID];
-    result->nodes[upID]->neighbours[nei2Pos] = result->nodes[newNei2ID];
-
-    for(i = 0; i < result->nodes[newNei1ID]->neiNum; ++i)
-    {
-        if (result->nodes[newNei1ID]->neighbours[i]->pos == newNei2ID)
-        {
-            result->nodes[newNei1ID]->neighbours[i] = result->nodes[upID];
-            break;
-        }
-    }
-
-    for(i = 0; i < result->nodes[newNei2ID]->neiNum; ++i)
-    {
-        if (result->nodes[newNei2ID]->neighbours[i]->pos == newNei1ID)
-        {
-            result->nodes[newNei2ID]->neighbours[i] = result->nodes[upID];
-            break;
-        }
-    }
-
-    if (result->lcaFinder != 0)
-    {
-        lcaFinderDelete(result->lcaFinder);
-        result->lcaFinder = 0;
-    }
-    if (calcLCAFinder)
-    {
-        treeLCAFinderCalculate(result);
-    }
-
-    return result;
-} /* treeSPRmove */
-
-unsigned treeGetDist(Tree* tree, unsigned node1ID, unsigned node2ID)
-{
-    unsigned node1Deep,  node2Deep, lcaDeep;
-    if (node1ID >= tree->nodesNum || node2ID >= tree->nodesNum)
-    {
-        fprintf(stderr, "Error, node ID is out of range");
-        exit(1);
-    }
-    if (tree->lcaFinder == 0)
-    {
-        fprintf(stderr, "Error, to use treeGetDist you must calculate LCAFinder first\n");
-        exit(1);
-    }
-
-    
-    node1Deep = tree->lcaFinder->deep[tree->lcaFinder->inPos[tree->nodes[node1ID]->pos]];
-    node2Deep = tree->lcaFinder->deep[tree->lcaFinder->inPos[tree->nodes[node2ID]->pos]];
-    lcaDeep = tree->lcaFinder->deep[sparseTableRMQ(tree->lcaFinder->sparceTable,\
-            tree->lcaFinder->inPos[tree->nodes[node1ID]->pos],\
-            tree->lcaFinder->inPos[tree->nodes[node2ID]->pos])];
-
-    return node1Deep - lcaDeep + node2Deep - lcaDeep;
-} /* treeGetDist */
-
-
-Tree* treePrune(Tree* source, char** leavesNames, size_t leavesNum,
-        char calculateLcaFinder)
-{
-    treeWash(source);
-    Tree* result = treeCreate();
-    result->nodesNum = 0;
-    result->leavesNum = 0;
-    result->leaves = calloc(sizeof(Node*), leavesNum);
-    result->nodes = calloc(sizeof(Node*), leavesNum * 2 - 1);
-    int i = 0;
-    int j = 0;
-    int isFound = 0;
-
-    int* takeInTree = calloc(source->nodesNum, sizeof(int));
-
-    size_t foundNum = 0;
-    for(i = 0; i < leavesNum; ++i)
-    {
-        isFound = 0;
-        for(j = 0; (j < source->leavesNum) && (!isFound); ++j)
-        {
-            if (strcmp(leavesNames[i], source->leaves[j]->name) == 0)
-            {
-                isFound = 1;
-                ++foundNum;
-                takeInTree[source->leaves[j]->pos] = 1;
-            }
-        }
-        if (!isFound)
-        {
-            fprintf(stderr, "%s\n", leavesNames[i]);
-            raiseError("No such leaf in source tree", 
-                    __FILE__, __FUNCTION__, __LINE__);
-        }
-    }
-
-    NodeStack* stack = nodeStackCreate(source->nodesNum);
-    NodeStack* pruneStack = nodeStackCreate(source->nodesNum);
-    Node* curNode = NULL;
-    Node* nextNode = NULL;
-    Node** neiResult = NULL;
-    Node* newNode = NULL; 
-    Node* nei1 = NULL;
-    Node* nei2 = NULL;
-
-    size_t rootPos = 0;
-    while(source->nodes[rootPos]->neiNum == 1){++rootPos;}
-    if (rootPos >= source->nodesNum) raiseError("Wrong tree structure\n",
-            __FILE__, __FUNCTION__, __LINE__);
-
-    nodeStackPush(stack, source->nodes[rootPos]);
-    source->nodes[rootPos]->color = GREY;
-
-    while(stack->curSize > 0)
-    {
-        curNode = nodeStackPeek(stack);
-        nextNode = NULL;
-        for(i = 0; i < curNode->neiNum; ++i)
-        {
-            if (curNode->neighbours[i]->color == WHITE)
-            {
-                nextNode = curNode->neighbours[i];
-                break;
-            }
-        }
-
-        if (nextNode)
-        {
-            nextNode->color = GREY;
-            nodeStackPush(stack, nextNode);
-        }
-        else // all childs are processed
-        {
-            curNode->color = BLACK;
-            nodeStackPop(stack);
-
-            if (curNode->neiNum == 1)
-            {
-               assert(curNode->name != NULL);
-               if(takeInTree[curNode->pos])
+               result = trees[treeNum - 1];
+               for(i = 0; i < treeNum - 1; ++i)
                {
-                   newNode = leafCreate(curNode->name);
-                   result->nodes[result->nodesNum] = newNode;
-                   newNode->pos = result->nodesNum++;
-                   result->leaves[result->leavesNum++] = newNode;
-                   nodeStackPush(pruneStack, newNode);
-                   
+                   treeWithScoreDelete(trees[i]);
                }
-               else
-               {
-                   nodeStackPush(pruneStack, NULL);
-               }
+            }
+            else if (strcmp(chType, "consensus") == 0)
+            {
+                printf("Making consensus\n");
+                //fprintf(stderr, "Option %s for multiple grow us not ready yet, PQ:main\n", chType);
+                //exit(1);
+                treesTemp = malloc(sizeof(Tree*) * treeNum);
+                for(i = 0; i < treeNum; ++i)
+                {
+                    treesTemp[i] = trees[i]->tree;
+                }
+                result = treeWithScoreCreate(makeConsensus(treesTemp, treeNum, 
+                            0.5, extended), 0);
+                treeNames = treeGetNames(result->tree);
+                seqNames = hashAlignmentGetSeqNames(alignment);
+                permutation = calculatePermutation(treeNames, seqNames, alignment->alignmentSize);
+
+                treeLCAFinderCalculate(result->tree);
+                result->score = countScoreHash(alignment, result->tree,
+                        pwmMatrix, alpha, gapOpt, hashScore, permutation);
+
+                for(i = 0; i < treeNum; ++i)
+                {
+                    treeWithScoreDelete(trees[i]);
+                }
+                free(treesTemp);
+            }
+            else if ((strcmp(chType, "genitor") == 0))
+            {
+                printf("starting genitor\n");
+                result = genitor(trees, treeNum, alignment, alpha, gapOpt, pwmMatrix, hashScore, iterNum, iterLim);
+                for(i = 0; i < treeNum; ++i)
+                {
+                    treeWithScoreDelete(trees[i]);
+                }
             }
             else
             {
-                size_t resNum = 0;
-                neiResult = malloc(sizeof(Node*) * curNode->neiNum);
-            
-                for(j = 0; j < curNode->neiNum; ++j)
-                {
-                    if (curNode->neighbours[j]->color == BLACK)
-                    {
-                        neiResult[resNum] = nodeStackPeek(pruneStack);
-                        nodeStackPop(pruneStack);
-                        if (neiResult[resNum] != NULL) ++resNum;
-                    }
-                }
+                fprintf(stderr, "Wrong value for chType: %s, PQ:main\n", chType);
+                exit(1);
+            }
+        }                      
+        else if (strcmp(grType, "saturation") == 0)
+        {
+            fprintf(stderr, "Option \"%s\" of grType is not ready yet\n", grType);
+            exit(1);
+        }
+        else
+        {
+            fprintf(stderr, "Wrong value for grType: %s\n", grType);
+            exit(1);
+        }
+    } 
+    else /* inTreeFileName is given => do not grow initial tree */
+    {
+        printf("Initial tree is from file %s\n", inTreeFileName);
+        iniTree = treeRead(inTreeFileName);
 
-                if (resNum == 0)
+        if(iniTree->leavesNum != alignment->alignmentSize)
+        {
+            fprintf(stderr, "Tree in %s does not correspond to alignment\n", inTreeFileName);
+            exit(1);
+        }
+        treeNames = treeGetNames(iniTree);
+        seqNames = hashAlignmentGetSeqNames(alignment);
+        permutation = calculatePermutation(treeNames, seqNames, alignment->alignmentSize);
+        if (permutation == NULL)
+        {
+            fprintf(stderr, "Tree in %s does not correspond to alignment\n", inTreeFileName);
+            exit(1);
+        }
+        result = treeWithScoreCreate(iniTree, countScoreHash(alignment, iniTree, pwmMatrix,
+                                                             alpha, gapOpt, hashScore, permutation));
+    } /* if inTreeFileName is defined */
+
+    treeLCAFinderCalculate(result->tree);
+    if (strcmp(nniType, "none") == 0)
+    {
+        ;
+    }
+    else if ( (strcmp(nniType, "direct") == 0) || (strcmp(nniType, "gradient") == 0) )
+    {
+        nniResult = gradientNNI(result->tree, alignment, pwmMatrix,\
+            alpha, gapOpt, hashScore);
+        treeWithScoreDelete(result);
+        result = nniResult;
+    }
+    else if ( strcmp(nniType, "simple") == 0 )
+    {
+        nniResult = simpleNNI(result->tree, alignment, pwmMatrix,\
+            alpha, gapOpt, hashScore);
+        treeWithScoreDelete(result);
+        result = nniResult;
+    }
+    else if (strcmp(nniType, "trajectory") == 0)
+    {
+        resultTrajectory = trajectoryNNI(result->tree, alignment, pwmMatrix, alpha, gapOpt, hashScore, trTime, initTemp, mcStyle);
+        treeWithScoreDelete(result);
+        result = resultTrajectory->bestPoint->treeWS;
+        nniResult = gradientNNI(result->tree, alignment, pwmMatrix, 
+                                alpha, gapOpt, hashScore); /* perform hill climbing after trajectory */
+        treeWithScoreDelete(result);
+        result = nniResult;
+    }
+    else
+    {
+        fprintf(stderr, "Wrong value for nniType: %s\n", nniType);
+        exit(1);
+    }
+
+    treeLCAFinderCalculate(result->tree);
+    if (strcmp(sprType, "none") == 0)
+    {
+        ;
+    }
+    else if ( (strcmp(sprType, "direct") == 0) || (strcmp(sprType, "gradient") == 0) )
+    {
+        sprResult = gradientSPR(result->tree, alignment, pwmMatrix, alpha, gapOpt, hashScore);
+        treeWithScoreDelete(result);
+        result = sprResult;
+    }
+    else if (strcmp(sprType, "simple") == 0)
+    {
+        sprResult = simpleSPR(result->tree, alignment, pwmMatrix, alpha, gapOpt, hashScore);
+        treeWithScoreDelete(result);
+        result = sprResult;
+    }
+    else if (strcmp(sprType, "trajectory") == 0)
+    {
+        fprintf(stderr, "Option \"%s\" for sprType is not ready yet\n", sprType);
+        exit(1);
+    }
+    else
+    {
+        fprintf(stderr, "Wrong value for sprType: %s\n", sprType);
+        exit(1);
+    }
+
+    fprintf(stdout, "Score of result tree is %lu\n", result->score);
+
+    if(maxScore == 1) /* calculation of relative score */
+    {
+        relativeScore = result->score;
+        treeNames = treeGetNames(result->tree);
+        seqNames = hashAlignmentGetSeqNames(alignment);
+        permutation = calculatePermutation(treeNames, seqNames, alignment->alignmentSize);
+        relativeScore /= countMaxScore(alignment, pwmMatrix, alpha, gapOpt, hashScore, permutation);
+        free(treeNames);
+        free(seqNames);
+        free(permutation);
+        printf("Relative score of result tree is %lf\n", relativeScore);
+    }
+
+    if (neiZscore == 1) /* calculation of Z-score based on NNI neighbors */
+    {
+        neighbours = getNNINeighbours(result->tree, alignment,\
+                pwmMatrix, alpha, gapOpt, hashScore);
+        sample = sampleFromTreeWSAr(neighbours,(result->tree->leavesNum - 3) * 2);
+        printf("Neighbors Z-score is %lf\n", sampleCalcZscore(sample, result->score));
+
+        if (distrFileName != NULL)
+        {
+            if(strcmp(distrFileName, "stdout") == 0)
+            {
+                distrFile = stdout;
+            }
+            else
+            {
+                distrFile = fopen(distrFileName, "w");
+            }
+            fprintf(distrFile, "Neighbours of result tree\n");
+            fprintf(distrFile, "neiNum\tScore\n");
+            for(i = 0; i < result->tree->leavesNum * 2 - 6; ++i)
+            {
+                fprintf(distrFile, "%d\t%lu\n", i + 1, neighbours[i]->score);
+            }
+            if((strcmp(distrFileName, "stdout") != 0) &&
+               (randTreeZscore == 0))
+            { 
+                fclose(distrFile);
+            }
+        }
+        sampleDelete(sample);
+
+        for(i = 0; i < result->tree->leavesNum * 2 - 6; ++i)
+        {
+            treeWithScoreDelete(neighbours[i]);
+        }
+        free(neighbours);
+    }
+
+    if (randTreeZscore == 1) /* calculation of Z-score based on random trees */
+    {
+        treeSample = growMultipleRandomTree(alignment, alpha, gapOpt,\
+            pwmMatrix, randTreeNum, hashScore);
+        sample = sampleFromTreeWSAr(treeSample, randTreeNum);
+        fprintf(stdout, "Random tree Z-score is %lf\n", sampleCalcZscore(sample, result->score));
+        if (distrFileName != NULL)
+        {
+            if (neiZscore == 0)
+            {
+                if(strcmp(distrFileName, "stdout") == 0)
                 {
-                    nodeStackPush(pruneStack, NULL);
-                }
-                else if (resNum == 1 && curNode->pos == rootPos &&
-                        neiResult[0]->neiNum == 2)
-                {
-                        nei1 = neiResult[0]->neighbours[0];
-                        nei2 = neiResult[0]->neighbours[1];
-                        nei1->neighbours[nei1->neiNum - 1] = nei2;
-                        nei2->neighbours[nei2->neiNum - 1] = nei1;
-                        nodeDelete(neiResult[0]);
-                        --result->nodesNum;
-                        nodeStackPush(pruneStack, nei1);
-                }
-                else if (resNum == 1)
-                {
-                    nodeStackPush(pruneStack, neiResult[0]);
-                }
-                else if (resNum == 2 && curNode->pos == rootPos)
-                {
-                    nodeAddNeighbour(neiResult[0], neiResult[1], 0);
-                    nodeAddNeighbour(neiResult[1], neiResult[0], 0);
-                    nodeStackPush(pruneStack, neiResult[0]);
+                    distrFile = stdout;
                 }
                 else
-                {
-                    newNode = nodeCreate();
-                    result->nodes[result->nodesNum] = newNode;
-                    newNode->pos = result->nodesNum++;
-
-                    for(j = 0; j < resNum; ++j)
-                    {
-                        nodeAddNeighbour(neiResult[j], newNode, 0);
-                        nodeAddNeighbour(newNode, neiResult[j], 0);
-                    }
-                    nodeStackPush(pruneStack, newNode);
-                }
-                free(neiResult);
+                {         
+                    distrFile = fopen(distrFileName, "w");
+                }   
             }
-
+            fprintf(distrFile, "Random trees\n");
+            fprintf(distrFile, "treeNum\tScore\n");
+            for(i = 0; i < randTreeNum; ++i)
+            {
+                fprintf(distrFile, "%d\t%lu\n", i + 1, treeSample[i]->score);
+            }
+            if(strcmp(distrFileName, "stdout") != 0) fclose(distrFile);
         }
-        
-    }
-
-    result->nodes = realloc(result->nodes, sizeof(Node*) * (result->leavesNum * 2 - 2));
-    if ((pruneStack->curSize != 1) || (result->leavesNum != leavesNum) ||\
-            (result->leavesNum * 2 - 2 != result->nodesNum))
-    {
-        printf("pruneStackSize : %d\n", pruneStack->curSize);
-        printf("result Leaves Num %d need %zu\n", result->leavesNum, leavesNum);
-        raiseError("Something've gone wrong\n",
-                __FILE__, __FUNCTION__, __LINE__);
-    }
-    nodeStackPop(pruneStack);
-
-
-    if (calculateLcaFinder)
-    {
-        treeLCAFinderCalculate(result);
-    }
-
-    nodeStackDelete(stack);
-    nodeStackDelete(pruneStack);
-    free(takeInTree);
-    treeWash(source);
-    
-    return result;
-}/* treePrune */
-
-
-/* test 
-int main()
-{
-    int i = 0, j = 0, k = 0;
-    unsigned neiPos = 0;
-    unsigned revertNodeID = 0;
-    unsigned revertNeiID = 0;
-    //char* newick = "((rec, (rec1, rec2)), ((dim, aunt) ,(aim,(bimmm, uiuu))));";
-    char* newick = "(rec, (aunt,(aim,(bimmm, uiuu))));";
-    
-    Tree* tree = treeFromNewick(newick);
-    printf("inPos\n");
-    for(i = 0; i < tree->nodesNum; ++i)
-    {
-        printf("%d ", tree->lcaFinder->inPos[i]);
-    }
-    printf("\n");
-    printf("Vertices\n");
-    for(i = 0; i < tree->lcaFinder->sparceTable->length; ++i)
-    {
-        printf("%d ", tree->lcaFinder->vertices[i]);
-    }
-    printf("\n");
-    printf("Deeps\n");
-    for(i = 0; i < tree->lcaFinder->sparceTable->length; ++i)
-    {
-        printf("%d ", tree->lcaFinder->deep[i]);
-    }
-    printf("\n");
-    printf("Sparse Table\n");
-    int length = tree->lcaFinder->sparceTable->length;
-    for(i = 0; i < tree->lcaFinder->sparceTable->height; ++i)
-    {
-        for(j = 0; j < length; ++j)
+        for(i = 0; i < randTreeNum; ++i)
         {
-            printf("%d ", tree->lcaFinder->sparceTable->table[i][j]);
+            treeWithScoreDelete(treeSample[i]);
         }
-        printf("\n");
-        length -= (1 << i);
+        free(treeSample);
+    }
+
+        resultTrees[j] = result;
+        removeHashScore(hashScore, alignment->alignmentSize);
+    }
+    /* Output */
+
+    if (doConsensus && resultTreeNum > 1)
+    {
+        treesTemp = malloc(sizeof(Tree*) * resultTreeNum);
+        for(i = 0; i < resultTreeNum; ++i)
+        {
+            treesTemp[i] = resultTrees[i]->tree;
+        }
+
+        result = treeWithScoreCreate(makeConsensus(treesTemp, resultTreeNum,
+                    0.5, extended), 0);
+        treeNames = treeGetNames(result->tree);
+        seqNames = hashAlignmentGetSeqNames(alignment);
+        permutation = calculatePermutation(treeNames, seqNames, alignment->alignmentSize);
+        treeLCAFinderCalculate(result->tree);
+        result->score = countScoreHash(alignmentSample[0], result->tree,
+        pwmMatrix, alpha, gapOpt, NULL, permutation);
+        free(treesTemp);
+        treeConsensusWrite(result->tree, outFileName);
+        treeDelete(result->tree);
+    }
+    else
+    {
+        if (doConsensus)
+        {
+            fprintf(stderr, "Num of trees is equal to 1, isn't nessesary to do consensus\n");
+        }
+        for(i = 0; i < resultTreeNum; ++i)
+        {
+            fileName = malloc(sizeof(char) * (strlen(outFileName) + 6 + i / 10));
+            sprintf(fileName, "%s_%u.nwk", outFileName, i);
+            treeWrite(resultTrees[i]->tree, fileName);
+        }
     }
     
-    printf("LCA is %u\n", treeFindLCADeep(tree, 2, 4));
-    printf("Split is %u\n", treeWhichSplit(tree, 2, 4, 1, 3));
-    printf("%u\n", tree->leavesNum);
-    printf("%s\n", tree->leaves[4]->name);
-    Tree* newTree = treeCopy(tree, 0);
-    printf("%u\n", newTree->leavesNum);
-    printf("%s\n", newTree->leaves[4]->name);
-    char* newickNew = treeToString(tree);
-    printf("%s\n", newickNew);
-    free(newickNew);
-    newickNew = treeToString(newTree);
-    printf("%s\n", newickNew);
-    free(newickNew);
-    Tree* newTreeAdd = treeAddLeaf(tree, 1, 1, "urrr", 1, 0);
-    Tree* newTreeRem = treeRemoveLeaf(tree, 3, 0, 0);
-    newTreeRem = treeRemoveLeaf(newTreeRem, 0, 0, 0);
-    newTreeRem = treeRemoveLeaf(newTreeRem, 0, 0, 0);
-    newickNew = treeToString(newTreeRem);
-    printf("%s\n", newickNew);
-    free(newickNew);
-    newTreeRem = treeRemoveLeaf(newTreeRem, 0, 0, 0);
-    newTreeRem = treeRemoveLeaf(newTreeRem, 0, 0, 0);
-    newickNew = treeToString(newTreeAdd);
-    printf("%s\n", newickNew);
-    free(newickNew);
-    newickNew = treeToString(newTreeRem);
-    printf("%s\n", newickNew);
-    free(newickNew);
-    newickNew = treeToString(newTree);
-    printf("%s\n", newickNew);
-    free(newickNew);
-    Tree* new2Tree = treeSPRMove(newTree, 0, neiPos, 3, 2, &revertNodeID,\
-            &revertNeiID, 0, 0);
-    newickNew = treeToString(new2Tree);
-    printf("%s\n", newickNew);
-    free(newickNew);
-    new2Tree = treeSPRMove(newTree, 0, neiPos, revertNodeID, revertNeiID,\
-            &revertNodeID, &revertNeiID, 0, 0);
-    newickNew = treeToString(new2Tree);
-    printf("%s\n", newickNew);
-    free(newickNew);
-    unsigned newBranch1NodeID = 0;
-    unsigned newBranch1NeiPos = 0;
-    unsigned newBracnh2NodeID = 0;
-    unsigned newBracnh2NeiPos = 0;
-    new2Tree = treeTBRMove(newTree, 1, 2, 0, 0, 5, 0,\
-            &newBranch1NodeID, &newBranch1NeiPos,\
-            &newBracnh2NodeID, &newBracnh2NeiPos,
-            0, 0);
-    newickNew = treeToString(new2Tree);
-    printf("TBR %s\n", newickNew);
-    free(newickNew);
-    printf("%d %d %d %d\n",\
-        newBranch1NodeID, newBranch1NeiPos,
-        newBracnh2NodeID, newBracnh2NeiPos);
-    new2Tree = treeTBRMove(newTree, 1, 2, \
-            newBranch1NodeID, newBranch1NeiPos,
-            newBracnh2NodeID, newBracnh2NeiPos,\
-            0, 0, 0, 0, 0, 0);
-    newickNew = treeToString(new2Tree);
-    printf("TBR %s\n", newickNew);
-    free(newickNew);
-    treeDelete(tree);
-    treeDelete(newTree);
+
+    for(i = 0; i < resultTreeNum; ++i)
+    {
+            treeWithScoreDelete(resultTrees[i]);
+    }
+    free(resultTrees);
+
+
+    if (strcmp(sampleType, "simple") == 0)
+    {
+        hashAlignmentDelete(alignmentSample[0]);
+    }
+    else
+    {
+        for(i = 0; i < resultTreeNum; ++i)
+        {
+            hashAlignmentDelete(alignmentSample[i]);
+        }
+    }
+    free(alignmentSample);
+
+
     return 0;
-}
-*/
+} /* main */
+
+
