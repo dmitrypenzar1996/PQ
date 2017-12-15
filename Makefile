@@ -1,4 +1,4 @@
-SOURCE_DIR = gen_test
+SOURCE_DIR = source
 LINK_DIR = link
 
 .PHONY: all clean
