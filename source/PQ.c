@@ -105,7 +105,7 @@ void printLongHelp(void)
     printf("Result statistics estimation:");
     printf(" -resultTreeNum <int>\n");
     printf("      Number of trees to generate\n");
-    printf("      Default: 1");
+    printf("      Default: 1\n");
     printf(" -sampleType <string>\n");
     printf("      how to generate sample trees\n");
     printf("      \"simple\" - just generate multiple trees\n");
@@ -113,8 +113,17 @@ void printLongHelp(void)
     printf("      \"jackknife\" - the same, but generate jackknife trees\n");
     printf("      Default: \"simple\"\n");
     printf("      --removeFraction <double>\n");
-    printf("      fraction of positions to be removed during jackknife\n");
-    printf("      Default: \"0.5\"");
+    printf("          fraction of positions to be removed during jackknife\n");
+    printf("          Default: \"0.5\"\n");
+    printf(" -doConsensus <0 or 1>\n");
+    printf("      do consensus of sampled trees or not\n");
+    printf("      Default: \"0\"\n");
+    printf("      --consensus_threshold <float>\n");
+    printf("          in how many leaves branch must occured to be in majority rule consensus\n");
+    printf("          Default: \"0.5\"\n");
+    printf("      --extended <0 or 1>\n");
+    printf("          whether to use simple majority rule or extended one\n");
+    printf("          Default: \"1\"\n");
     return;
 } /* printLongHelp */
 
@@ -135,6 +144,8 @@ void printHelp(char *command)
     printf("\t\t[-distrFile <FileName>]\n");
     printf("\t[-resultTreeNum <int>] [-sampleType <simple|bootstrap|jackknife> ]\n");
     printf("\t\t[--removeFraction <int>]\n");
+    printf("\t[-doConsensus <0|1>]\n");
+    printf("\t\t[--extended <0|1>] [--consensus_threshold <float>]\n");
     printf("For description of parameters run %s -h\n", command);
     puts("Press Enter to continue");
     getchar();
@@ -164,8 +175,6 @@ int main(int argc, char** argv)
     char* sampleType;
     char* distrFileName = NULL;
     char* inTreeFileName = NULL;
-    char doConsensus = 0;
-    char extended = 1;
     unsigned randTreeNum = 10;
     unsigned resultTreeNum = 1;
     double removeFraction = 0.5;
@@ -174,6 +183,9 @@ int main(int argc, char** argv)
     int neiZscore = 0;
     int randTreeZscore = 0;
     GapOpt gapOpt = PASS_ANY;
+    char doConsensus = 0;
+    char extended = 1;
+    double consensus_threshold = 0.5;
     char* param;
     int known;
     int alignmentSet;
@@ -480,6 +492,23 @@ int main(int argc, char** argv)
                     doConsensus = atoi(argv[startOptionsNum + 1]);
                 }
             }
+            if (strcmp(param, "--extended") == 0)
+            {
+                known = 1;
+                if (startOptionsNum + 1 < argc)
+                {
+                    extended = atoi(argv[startOptionsNum + 1]);
+                }
+            }
+            if (strcmp(param, "--consensus_threshold") == 0)
+            {
+                known = 1;
+                
+                if (startOptionsNum + 1 < argc)
+                {
+                    consensus_threshold = atof(argv[startOptionsNum + 1]);
+                }
+            }
             if (strcmp(param, "-gapOpt") == 0)
             {
                 known = 1;
@@ -600,7 +629,7 @@ int main(int argc, char** argv)
                     treesTemp[i] = trees[i]->tree;
                 }
                 result = treeWithScoreCreate(makeConsensus(treesTemp, treeNum, 
-                            0.5, extended), 0);
+                            consensus_threshold, extended), 0);
                 treeNames = treeGetNames(result->tree);
                 seqNames = hashAlignmentGetSeqNames(alignment);
                 permutation = calculatePermutation(treeNames, seqNames, alignment->alignmentSize);
@@ -827,7 +856,7 @@ int main(int argc, char** argv)
         }
 
         result = treeWithScoreCreate(makeConsensus(treesTemp, resultTreeNum,
-                    0.5, extended), 0);
+                    consensus_threshold, extended), 0);
         treeNames = treeGetNames(result->tree);
         seqNames = hashAlignmentGetSeqNames(alignment);
         permutation = calculatePermutation(treeNames, seqNames, alignment->alignmentSize);

@@ -1111,10 +1111,12 @@ Tree* makeConsensus(Tree** treeArray, size_t treeNum, double threshold,
     branchCounterSort(bc);
     if (extended)
     {
+        printf("Applying extended majority rule\n");
         consensus = majorityExtendedRule(bc, treeNum * threshold);
     }
     else
     {
+        printf("Applying majority rule with threshold %.02lf\n", threshold);
         consensus = majorityRule(bc, treeNum * threshold);
     }
 
