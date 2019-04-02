@@ -10,7 +10,6 @@
 #include "estimate.h"
 #include "consensus.h"
 #include "bootstrap.h"
-#include "genitor.h"
 
 
 #define TRUE 1
@@ -18,14 +17,14 @@
 
 void printLongHelp(void)
 {
-    printf("PQ version 1.6\n");
+    printf("PQ version 2.3\n");
     printf("General options:\n");
     printf(" -alignment <FileName> \n");
     printf("       File with input alignment in fasta format\n");
     printf("       Required, no default value\n");
     printf(" -out <FileName>\n");
-    printf("       Output file\n");
-    printf("       Default: pq_out.tre\n");
+    printf("       Output file name\n");
+    printf("       Default: \"pq.tre\"\n");
     printf(" -iniTree <FileName> \n");
     printf("       File with initial tree in Newick format, optional\n");
     printf("       If -iniTree is given, growing tree by stepwise addition is omitted\n");
@@ -53,20 +52,13 @@ void printLongHelp(void)
     printf("           for \"multiple\" option: number of trees to grow\n");
     printf("           Default: 10\n");
     printf("      --chType <String>\n");
-    printf("           \"bestScore\" : choose tree with best score\n");
-    printf("           \"consensus\" : make consensus of trees\n");
-    printf("           \"genitor\" : search for optimal tree with genetic algorithm\n");
-    printf("                --iterNum <Positive integer>\n");
-    printf("                    for \"genitor\" option: number of iterations to perform\n");
-    printf("                    Default: 100\n");
-    printf("                --iterLim <Positive integer>\n");
-    printf("                    for \"genitor\" option: number of failures to stop after\n");
-    printf("                    Default: 25\n");
-    printf("      Default: \"bestScore\"\n");
+    printf("           \"bestScore\": choose tree with best score\n");
+    printf("           \"consensus\": make consensus of trees\n");
+    printf("           Default: \"bestScore\"\n");
     printf("      Growing is not performed if an initial tree is given\n");
     printf(" -randLeaves <0 or 1>\n");
     printf("      If 1, shuffle the input order of sequences\n");
-    printf("      Switching to 0 makes sense for grType = \"one\")\n");
+    printf("      Switching to 0 makes sense for grType = \"one\"\n");
     printf("      Default: 1\n"); 
     printf(" -nniType <String>\n");
     printf("      \"none\": do not perform NNI search,\n");
@@ -75,13 +67,13 @@ void printLongHelp(void)
     printf("      \"trajectory\": perform NNI Monte-Carlo search\n");
     printf("      Default: \"direct\"\n"); 
     printf("      --trTime <Positive integer>\n"); 
-    printf("           For \"trajectory\"option: number of iterations\n");
+    printf("           For \"trajectory\" option: number of iterations\n");
     printf("           Default : 1000\n"); 
     printf("      --initTemp <Positive integer>\n");
-    printf("           For \"trajectory\"option: initial temperature\n");
+    printf("           For \"trajectory\" option: initial temperature\n");
     printf("           Default: 1000\n");
     printf("      --mcStyle <1|2|3>\n");
-    printf("           For \"trajectory\"option: style of Monte-Carlo search\n");
+    printf("           For \"trajectory\" option: style of Monte-Carlo search\n");
     printf("           Default: 1\n");
     printf(" -sprType <String>\n");
     printf("      \"none\": do not perform SPR search,\n");
@@ -98,45 +90,39 @@ void printLongHelp(void)
     printf("      Default: 0\n");
     printf("      --randTreeNum <Positive integer>\n");
     printf("           For randTreeZscore: number of random trees\n");     
-    printf("           Default : 10\n");
+    printf("           Default: 10\n");
     printf(" -distrFile <FileName>\n");
     printf("      File name to write scores of neighboring and/or random trees\n");
     printf("      Optional, no default value\n");
-    printf("Result statistics estimation:");
+    printf("\n");
+    printf("Result statistics estimation:\n");
     printf(" -resultTreeNum <int>\n");
     printf("      Number of trees to generate\n");
     printf("      Default: 1\n");
     printf(" -sampleType <string>\n");
-    printf("      how to generate sample trees\n");
-    printf("      \"simple\" - just generate multiple trees\n");
-    printf("      \"bootstrap\" - generate bootstrap trees(first tree  is result tree, others - bootstrap)\n");
-    printf("      \"jackknife\" - the same, but generate jackknife trees\n");
+    printf("      How to generate sample trees\n");
+    printf("      \"simple\": just construct several trees with the entire alignment\n");
+    printf("      \"bootstrap\": generate bootstrap replicas,\n");
+    printf("      \"jackknife\": generate jackknife replicas\n");
     printf("      Default: \"simple\"\n");
     printf("      --removeFraction <double>\n");
-    printf("          fraction of positions to be removed during jackknife\n");
-    printf("          Default: \"0.5\"\n");
-    printf(" -doConsensus <0 or 1>\n");
-    printf("      do consensus of sampled trees or not\n");
-    printf("      Default: \"0\"\n");
-    printf("      --consensus_threshold <float>\n");
-    printf("          in how many leaves branch must occured to be in majority rule consensus\n");
-    printf("          Default: \"0.5\"\n");
-    printf("      --extended <0 or 1>\n");
-    printf("          whether to use simple majority rule or extended one\n");
-    printf("          Default: \"1\"\n");
+    printf("        fraction of positions to be removed during jackknife\n");
+    printf("        Default: 0.5\n");
+    printf(" -doConsensus <0|1>\n");
+    printf("      if 1, generate the consensus tree\n");
+    printf("      Default: 0\n");
     return;
 } /* printLongHelp */
 
 void printHelp(char *command)
 {
-    /* printf("Help message for PQ ver 1.5\n"); */
+    /* printf("Help message for PQ ver 2.3\n"); */
     printf("Usage:\n");
     printf("%s -alignment <FileName> -out <FileName>\n", command);
     printf("\t[-iniTree <FileName>] [-pwm <FileName>]\n");
     printf("\t[-alpha <int>] [-gapOpt <0|1|2>]\n");
     printf("\t[-grType <one|multiple> [-randLeaves <0|1>]] [--treeNum <int>]\n");
-    printf("\t\t[--chType <bestScore|consensus|genitor>]\n");
-    printf("\t\t\t[--iterNum <int>] [--iterLim <int>]\n");
+    printf("\t\t[--chType <bestScore|consensus>]\n");
     printf("\t[-nniType <none|simple|direct|trajectory>\n");
     printf("\t\t[--trTime <int>] [--initTemp <int>] [--mcStyle <1|2|3>]]\n");
     printf("\t[-sprType <none|simple|direct>]\n");
@@ -145,7 +131,6 @@ void printHelp(char *command)
     printf("\t[-resultTreeNum <int>] [-sampleType <simple|bootstrap|jackknife> ]\n");
     printf("\t\t[--removeFraction <int>]\n");
     printf("\t[-doConsensus <0|1>]\n");
-    printf("\t\t[--extended <0|1>] [--consensus_threshold <float>]\n");
     printf("For description of parameters run %s -h\n", command);
     puts("Press Enter to continue");
     getchar();
@@ -165,8 +150,6 @@ int main(int argc, char** argv)
     int randLeaves = 1;
     char* grType;
     unsigned treeNum = 10;
-    unsigned iterNum = 100;
-    unsigned iterLim = 25; 
     char* nniType;
     unsigned long int trTime = 1000;
     unsigned int initTemp = 1000;
@@ -175,6 +158,8 @@ int main(int argc, char** argv)
     char* sampleType;
     char* distrFileName = NULL;
     char* inTreeFileName = NULL;
+    char doConsensus = 0;
+    char extended = 1;
     unsigned randTreeNum = 10;
     unsigned resultTreeNum = 1;
     double removeFraction = 0.5;
@@ -183,9 +168,6 @@ int main(int argc, char** argv)
     int neiZscore = 0;
     int randTreeZscore = 0;
     GapOpt gapOpt = PASS_ANY;
-    char doConsensus = 0;
-    char extended = 1;
-    double consensus_threshold = 0.5;
     char* param;
     int known;
     int alignmentSet;
@@ -329,24 +311,6 @@ int main(int argc, char** argv)
                     chType = argv[startOptionsNum + 1];
                 }
             }
-            //----------------------
-            if (strcmp(param, "--iterNum") == 0)
-            {
-                known = 1;
-                if (startOptionsNum + 1 < argc)
-                {
-                    iterNum = atoi(argv[startOptionsNum + 1]);
-                }
-            }
-            if (strcmp(param, "--iterLim") == 0)
-            {
-                known = 1;
-                if (startOptionsNum + 1 < argc)
-                {
-                    iterLim = atoi(argv[startOptionsNum + 1]);
-                }
-            }
-            //----------------------
             if (strcmp(param, "-nniType") == 0)
             {
                 known = 1;
@@ -405,7 +369,7 @@ int main(int argc, char** argv)
             if (strcmp(param, "-tbrType") == 0)
             {
                 known = 1;
-                fprintf(stderr, "Warning: TBR is not suppoted in this version, setting -tbrType is ignored\n");
+                fprintf(stderr, "Warning: TBR is not supported in this version, setting -tbrType is ignored\n");
             }
             if (strcmp(param, "-maxScore") == 0)
             {
@@ -454,7 +418,7 @@ int main(int argc, char** argv)
                 known = 1;
                 if (startOptionsNum + 1 < argc)
                 {
-                    inTreeFileName = (char *)malloc(sizeof(char) * (strlen(argv[startOptionsNum + 1] + 1)));
+                    inTreeFileName = (char *)malloc(sizeof(char) * (strlen(argv[startOptionsNum + 1]) + 1));
                     strcpy(inTreeFileName, argv[startOptionsNum + 1]);
                 }
             }
@@ -490,23 +454,6 @@ int main(int argc, char** argv)
                 if (startOptionsNum + 1 < argc)
                 {
                     doConsensus = atoi(argv[startOptionsNum + 1]);
-                }
-            }
-            if (strcmp(param, "--extended") == 0)
-            {
-                known = 1;
-                if (startOptionsNum + 1 < argc)
-                {
-                    extended = atoi(argv[startOptionsNum + 1]);
-                }
-            }
-            if (strcmp(param, "--consensus_threshold") == 0)
-            {
-                known = 1;
-                
-                if (startOptionsNum + 1 < argc)
-                {
-                    consensus_threshold = atof(argv[startOptionsNum + 1]);
                 }
             }
             if (strcmp(param, "-gapOpt") == 0)
@@ -557,9 +504,9 @@ int main(int argc, char** argv)
     }
     if (outFileName == NULL)
     {
-        fprintf(stderr, "Warning: no output file name is given; the result will be written to \"pq_out.tre\"\n");
+        fprintf(stderr, "Warning: no output file name is given, output will be added to \"pq.tre\"\n");
         outFileName = (char *)malloc(sizeof(char) * 12);
-        strcpy(outFileName, "pq_out.tre");
+        strcpy(outFileName, "pq.tre");
     }
 
 /***********************************************************
@@ -591,8 +538,7 @@ int main(int argc, char** argv)
     }
     else
     {
-        raiseError("Wrong value of argument for sampleType", __FILE__,
-                __FUNCTION__, __LINE__);
+        raiseError("Wrong value of argument for sampleType", __FILE__, __FUNCTION__, __LINE__);
     }
 
     resultTrees = malloc(sizeof(TreeWithScore*) * resultTreeNum);
@@ -629,7 +575,7 @@ int main(int argc, char** argv)
                     treesTemp[i] = trees[i]->tree;
                 }
                 result = treeWithScoreCreate(makeConsensus(treesTemp, treeNum, 
-                            consensus_threshold, extended), 0);
+                            0.5, extended), 0);
                 treeNames = treeGetNames(result->tree);
                 seqNames = hashAlignmentGetSeqNames(alignment);
                 permutation = calculatePermutation(treeNames, seqNames, alignment->alignmentSize);
@@ -643,15 +589,6 @@ int main(int argc, char** argv)
                     treeWithScoreDelete(trees[i]);
                 }
                 free(treesTemp);
-            }
-            else if ((strcmp(chType, "genitor") == 0))
-            {
-                printf("starting genitor\n");
-                result = genitor(trees, treeNum, alignment, alpha, gapOpt, pwmMatrix, hashScore, iterNum, iterLim);
-                for(i = 0; i < treeNum; ++i)
-                {
-                    treeWithScoreDelete(trees[i]);
-                }
             }
             else
             {
@@ -847,7 +784,7 @@ int main(int argc, char** argv)
     }
     /* Output */
 
-    if (doConsensus && resultTreeNum > 1)
+    if (doConsensus != 0 && resultTreeNum > 1)
     {
         treesTemp = malloc(sizeof(Tree*) * resultTreeNum);
         for(i = 0; i < resultTreeNum; ++i)
@@ -856,7 +793,7 @@ int main(int argc, char** argv)
         }
 
         result = treeWithScoreCreate(makeConsensus(treesTemp, resultTreeNum,
-                    consensus_threshold, extended), 0);
+                    0.5, extended), 0);
         treeNames = treeGetNames(result->tree);
         seqNames = hashAlignmentGetSeqNames(alignment);
         permutation = calculatePermutation(treeNames, seqNames, alignment->alignmentSize);
@@ -867,27 +804,27 @@ int main(int argc, char** argv)
         treeConsensusWrite(result->tree, outFileName);
         treeDelete(result->tree);
     }
-    else
+    if (doConsensus != 0 && resultTreeNum == 1) 
     {
-        if (doConsensus)
-        {
-            fprintf(stderr, "Num of trees is equal to 1, isn't nessesary to do consensus\n");
-        }
+        fprintf(stderr, "Number of trees is 1, it is not necessary to do consensus\n");
+        treeWrite(resultTrees[0]->tree, outFileName);
+    }
+    if (doConsensus == 0)
+    {
+        treesWrite(resultTrees, resultTreeNum, outFileName);
+/*
         for(i = 0; i < resultTreeNum; ++i)
         {
-            fileName = malloc(sizeof(char) * (strlen(outFileName) + 6 + i / 10));
-            sprintf(fileName, "%s_%u.nwk", outFileName, i);
-            treeWrite(resultTrees[i]->tree, fileName);
+            treeWrite(resultTrees[i]->tree, outFileName);
         }
+*/
     }
-    
 
     for(i = 0; i < resultTreeNum; ++i)
     {
-            treeWithScoreDelete(resultTrees[i]);
+        treeWithScoreDelete(resultTrees[i]);
     }
     free(resultTrees);
-
 
     if (strcmp(sampleType, "simple") == 0)
     {
@@ -905,5 +842,4 @@ int main(int argc, char** argv)
 
     return 0;
 } /* main */
-
 

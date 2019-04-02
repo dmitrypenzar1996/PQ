@@ -26,3 +26,48 @@ void treeWithScoreSort(TreeWithScore** treeWSArray, size_t size)
     return;
 }
 
+void treesWrite(TreeWithScore** resultTrees, unsigned resultTreeNum, char* outFileName)
+{
+    FILE* outFile;
+    char* result; 
+    int i, j, k;
+
+    if(strcmp(outFileName, "stdout") == 0)
+    {
+        outFile = stdout;
+    }
+    else 
+    {
+        outFile = fopen(outFileName, "w");
+        if(outFile == NULL)
+        {
+            fprintf(stderr, "Cannot open %s for writing\n", outFileName);
+            exit(1);
+        }
+    }
+    for(k = 0; k < resultTreeNum; ++k)
+    {
+        result = treeToString(resultTrees[k]->tree);
+        i = j = 0;
+        while ( result[i] != '\0') {
+            if ( j > 60 && result[i] == ',' ) 
+            {
+                putc(result[i], outFile);
+                putc('\n', outFile);
+                j = 0;
+            }
+            else 
+            {
+                putc(result[i], outFile);
+            }
+            i++;
+            j++;
+        }
+        putc('\n', outFile);
+        free(result);
+    } /* for */
+    if(strcmp(outFileName, "stdout") != 0) fclose(outFile);
+    return;
+} /* treesWrite */
+
+
